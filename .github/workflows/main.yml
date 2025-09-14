@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 4 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - 'main'
 
 jobs:
   # 定义一个 job 来调用可复用工作流
