@@ -38,7 +38,11 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+          
+      - name: 获取当前日期
+        id: date
+        run: echo "DATE_TAG=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+        
       - name: 提取 Docker 元数据
         id: meta
         uses: docker/metadata-action@master
@@ -49,7 +53,8 @@ jobs:
             type=raw,value=latest
             # 类型 'schedule' 用于基于计划任务的事件
             # pattern={{date 'YYYY.MM.DD'}} 会自动获取当前日期并格式化
-            type=schedule,pattern={{date 'YYYY.MM.DD'}}
+            #type=schedule,pattern={{date 'YYYY.MM.DD'}}
+            type=raw,value={{env.DATE_TAG}}
       - name: 构建并且推送 Docker 镜像
         uses: docker/build-push-action@master
         with:
