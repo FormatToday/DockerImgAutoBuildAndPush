@@ -44,7 +44,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}
-
+          tags: |
+            # 类型 'raw' 用于创建一个固定的 'latest' 标签
+            type=raw,value=latest
+            # 类型 'schedule' 用于基于计划任务的事件
+            # pattern={{date 'YYYY.MM.DD'}} 会自动获取当前日期并格式化
+            type=schedule,pattern={{date 'YYYY.MM.DD'}}
       - name: 构建并且推送 Docker 镜像
         uses: docker/build-push-action@v5
         with:
