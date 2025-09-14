@@ -43,6 +43,9 @@ jobs:
         id: date
         run: echo "DATE_TAG=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
         
+      - name: Verify Date Tag
+        run: echo "The date tag from env is: ${{ env.DATE_TAG }}"
+        
       - name: 提取 Docker 元数据
         id: meta
         uses: docker/metadata-action@master
@@ -54,7 +57,12 @@ jobs:
             # 类型 'schedule' 用于基于计划任务的事件
             # pattern={{date 'YYYY.MM.DD'}} 会自动获取当前日期并格式化
             #type=schedule,pattern={{date 'YYYY.MM.DD'}}
-            type=raw,value={{env.DATE_TAG}}
+            type=raw,value=${{env.DATE_TAG}}
+      - name: Print Docker Tags
+        run: |
+          echo "Generated tags are:"
+          echo "${{ steps.meta.outputs.tags }}"
+          
       - name: 构建并且推送 Docker 镜像
         uses: docker/build-push-action@master
         with:
