@@ -45,7 +45,7 @@ jobs:
       matrix:
         # 如果提供了 multi_dockerfiles 参数，则使用它来构建多个 Dockerfile
         # 否则使用单个 dockerfile_path 构建一个 Dockerfile
-        dockerfile_config: ${{ fromJSON(inputs.multi_dockerfiles || format('[{{"path": "{0}", "context": "{1}", "args": {2}}}]', inputs.dockerfile_path, inputs.context_path, inputs.build_args)) }}
+        dockerfile_config: ${{ fromJSON(inputs.multi_dockerfiles) || fromJSON(format('[{"path": "%s", "context": "%s", "args": %s}]', inputs.dockerfile_path, inputs.context_path, inputs.build_args)) }}
     steps:
       - name: 检出目标仓库
         uses: actions/checkout@main
