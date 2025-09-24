@@ -22,15 +22,11 @@ jobs:
           - repo: 'JefferyHcool/BiliNote'
             image_name: 'bili-note-backend'
             multi_dockerfiles: |
-              [
-                {"path": "backend/Dockerfile", "context": "backend"}
-              ]
+              [{"path": "backend/Dockerfile", "context": "backend"}]
           - repo: 'JefferyHcool/BiliNote'
             image_name: 'bili-note-frontend'
             multi_dockerfiles: |
-              [
-                {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
-              ]
+              [{"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}]
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
       source_repo: ${{ matrix.repo }}
