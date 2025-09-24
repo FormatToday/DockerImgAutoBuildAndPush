@@ -13,63 +13,60 @@ DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 Git
 - 构建 Docker 镜像
 - 推送镜像到 Docker Hub
 - 支持单个和多个 Dockerfile 的构建
-- 可复用的工作流设计
+- 可重用的工作流设计
 - 支持不同项目结构的灵活配置
 
 ## 使用方法
 
-### 单个 Dockerfile 项目（根目录）
+### 项目配置
 
-对于Dockerfile位于项目根目录的项目（如li88iioo/Photonix），使用默认配置：
+系统通过在 `main.yml` 中为每个项目创建独立的 job 来支持不同结构的项目：
+
+1. **单个Dockerfile项目**（如li88iioo/Photonix）- 使用默认配置
+2. **多个Dockerfile项目**（如JefferyHcool/BiliNote）- 为每个Dockerfile创建独立的job
+
+### 完整配置示例
+
+在主工作流中为不同项目创建独立的构建任务：
 
 ```yaml
 jobs:
-  call-reusable-workflow:
-    uses: ./.github/workflows/docker-build-reusable.yml
+  # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
+  build-photonix:
+    uses: ./.github/workflows/docker-build-simple.yml
     with:
       source_repo: 'li88iioo/Photonix'
       docker_image_name: 'photonix'
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-```
 
-### 多个 Dockerfile 项目（不同目录）
-
-对于具有多个Dockerfile且位于不同目录的项目（如JefferyHcool/BiliNote），需要为每个Dockerfile创建单独的构建任务：
-
-```yaml
-jobs:
-  call-reusable-workflow:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 构建后端Dockerfile
-          - repo: 'JefferyHcool/BiliNote'
-            image_name: 'bili-note-backend'
-            multi_dockerfiles: |
-              [
-                {"path": "backend/Dockerfile", "context": "backend"}
-              ]
-          # 构建前端Dockerfile
-          - repo: 'JefferyHcool/BiliNote'
-            image_name: 'bili-note-frontend'
-            multi_dockerfiles: |
-              [
-                {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
-              ]
-    uses: ./.github/workflows/docker-build-reusable.yml
+  # 构建JefferyHcool/BiliNote后端（Dockerfile在backend目录）
+  build-bili-note-backend:
+    uses: ./.github/workflows/docker-build-simple.yml
     with:
-      source_repo: ${{ matrix.repo }}
-      docker_image_name: ${{ matrix.image_name }}
-      multi_dockerfiles: ${{ matrix.multi_dockerfiles }}
+      source_repo: 'JefferyHcool/BiliNote'
+      docker_image_name: 'bili-note-backend'
+      dockerfile_path: 'backend/Dockerfile'
+      context_path: 'backend'
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
+  build-bili-note-frontend:
+    uses: ./.github/workflows/docker-build-simple.yml
+    with:
+      source_repo: 'JefferyHcool/BiliNote'
+      docker_image_name: 'bili-note-frontend'
+      dockerfile_path: 'BillNote_frontend/Dockerfile'
+      context_path: 'BillNote_frontend'
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 ```
 
-### 参数说明
+### 可重用工作流参数说明
 
 | 参数名 | 是否必需 | 默认值 | 说明 |
 |--------|---------|--------|------|
@@ -77,42 +74,21 @@ jobs:
 | docker_image_name | 是 | 无 | 推送到 Docker Hub 的镜像名称 |
 | dockerfile_path | 否 | "Dockerfile" | Dockerfile 路径 |
 | context_path | 否 | "." | 构建上下文路径 |
-| build_args | 否 | "{}" | 额外的 Docker 构建参数（JSON 格式） |
-| multi_dockerfiles | 否 | "[]" | 是否构建多个 Dockerfile（JSON 数组格式） |
 
-### 完整配置示例
+### 添加新项目
 
-在主工作流中使用矩阵策略构建多个仓库：
+要添加新项目，只需在 `main.yml` 中添加一个新的 job：
 
 ```yaml
-jobs:
-  call-reusable-workflow:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 单个Dockerfile项目
-          - repo: 'li88iioo/Photonix'
-            image_name: 'photonix'
-          # 多个Dockerfile项目 - 后端
-          - repo: 'JefferyHcool/BiliNote'
-            image_name: 'bili-note-backend'
-            multi_dockerfiles: |
-              [
-                {"path": "backend/Dockerfile", "context": "backend"}
-              ]
-          # 多个Dockerfile项目 - 前端
-          - repo: 'JefferyHcool/BiliNote'
-            image_name: 'bili-note-frontend'
-            multi_dockerfiles: |
-              [
-                {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
-              ]
-    uses: ./.github/workflows/docker-build-reusable.yml
+  # 构建新项目
+  build-new-project:
+    uses: ./.github/workflows/docker-build-simple.yml
     with:
-      source_repo: ${{ matrix.repo }}
-      docker_image_name: ${{ matrix.image_name }}
-      multi_dockerfiles: ${{ matrix.multi_dockerfiles || '[]' }}
+      source_repo: 'username/repository'
+      docker_image_name: 'image-name'
+      # 如果Dockerfile不在根目录，指定路径
+      dockerfile_path: 'path/to/Dockerfile'
+      context_path: 'path/to/context'
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
