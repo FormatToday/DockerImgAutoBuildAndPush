@@ -18,12 +18,24 @@ jobs:
         include:
           - repo: 'li88iioo/Photonix'
             image_name: 'photonix'
-          # - repo: 'another-user/another-repo'
-          #   image_name: 'another-app'
+          # 为具有多个Dockerfile的项目添加配置
+          - repo: 'JefferyHcool/BiliNote'
+            image_name: 'bili-note-backend'
+            multi_dockerfiles: |
+              [
+                {"path": "backend/Dockerfile", "context": "backend"}
+              ]
+          - repo: 'JefferyHcool/BiliNote'
+            image_name: 'bili-note-frontend'
+            multi_dockerfiles: |
+              [
+                {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
+              ]
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
       source_repo: ${{ matrix.repo }}
       docker_image_name: ${{ matrix.image_name }}
+      multi_dockerfiles: ${{ matrix.multi_dockerfiles || '[]' }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -2,7 +2,10 @@
 
 ## 简介
 
-DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 GitHub Actions 工作流。
+DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 GitHub Actions 工作流。它支持两种不同的项目结构：
+
+1. 单个Dockerfile位于项目根目录的项目（如li88iioo/Photonix）
+2. 多个Dockerfile位于不同子目录的项目（如JefferyHcool/BiliNote）
 
 ## 功能特性
 
@@ -11,44 +14,56 @@ DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 Git
 - 推送镜像到 Docker Hub
 - 支持单个和多个 Dockerfile 的构建
 - 可复用的工作流设计
+- 支持不同项目结构的灵活配置
 
 ## 使用方法
 
-### 单个 Dockerfile 构建
+### 单个 Dockerfile 项目（根目录）
 
-在你的工作流中调用可复用工作流：
+对于Dockerfile位于项目根目录的项目（如li88iioo/Photonix），使用默认配置：
 
 ```yaml
 jobs:
   call-reusable-workflow:
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
-      source_repo: 'username/repository'
-      docker_image_name: 'image-name'
-      # 可选参数
-      dockerfile_path: 'Dockerfile'  # 默认为项目根目录的 Dockerfile
-      context_path: '.'              # 默认为项目根目录
+      source_repo: 'li88iioo/Photonix'
+      docker_image_name: 'photonix'
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 ```
 
-### 多个 Dockerfile 构建
+### 多个 Dockerfile 项目（不同目录）
 
-如果需要构建多个 Dockerfile，可以使用 `multi_dockerfiles` 参数：
+对于具有多个Dockerfile且位于不同目录的项目（如JefferyHcool/BiliNote），需要为每个Dockerfile创建单独的构建任务：
 
 ```yaml
 jobs:
   call-reusable-workflow:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 构建后端Dockerfile
+          - repo: 'JefferyHcool/BiliNote'
+            image_name: 'bili-note-backend'
+            multi_dockerfiles: |
+              [
+                {"path": "backend/Dockerfile", "context": "backend"}
+              ]
+          # 构建前端Dockerfile
+          - repo: 'JefferyHcool/BiliNote'
+            image_name: 'bili-note-frontend'
+            multi_dockerfiles: |
+              [
+                {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
+              ]
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
-      source_repo: 'username/repository'
-      docker_image_name: 'image-name'
-      multi_dockerfiles: |
-        [
-          {"path": "backend/Dockerfile", "context": "backend"},
-          {"path": "frontend/Dockerfile", "context": "frontend"}
-        ]
+      source_repo: ${{ matrix.repo }}
+      docker_image_name: ${{ matrix.image_name }}
+      multi_dockerfiles: ${{ matrix.multi_dockerfiles }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -65,7 +80,7 @@ jobs:
 | build_args | 否 | "{}" | 额外的 Docker 构建参数（JSON 格式） |
 | multi_dockerfiles | 否 | "[]" | 是否构建多个 Dockerfile（JSON 数组格式） |
 
-### 构建多个仓库示例
+### 完整配置示例
 
 在主工作流中使用矩阵策略构建多个仓库：
 
@@ -76,20 +91,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # 单个Dockerfile项目
           - repo: 'li88iioo/Photonix'
             image_name: 'photonix'
+          # 多个Dockerfile项目 - 后端
           - repo: 'JefferyHcool/BiliNote'
-            image_name: 'bili-note'
+            image_name: 'bili-note-backend'
             multi_dockerfiles: |
               [
-                {"path": "backend/Dockerfile", "context": "backend"},
+                {"path": "backend/Dockerfile", "context": "backend"}
+              ]
+          # 多个Dockerfile项目 - 前端
+          - repo: 'JefferyHcool/BiliNote'
+            image_name: 'bili-note-frontend'
+            multi_dockerfiles: |
+              [
                 {"path": "BillNote_frontend/Dockerfile", "context": "BillNote_frontend"}
               ]
     uses: ./.github/workflows/docker-build-reusable.yml
     with:
       source_repo: ${{ matrix.repo }}
       docker_image_name: ${{ matrix.image_name }}
-      multi_dockerfiles: ${{ matrix.multi_dockerfiles }}
+      multi_dockerfiles: ${{ matrix.multi_dockerfiles || '[]' }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
