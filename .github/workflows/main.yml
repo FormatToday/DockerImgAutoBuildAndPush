@@ -11,34 +11,35 @@ on:
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
-jobs:
-  # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
-  build-photonix:
+# 定义可重用的工作流配置
+defaults:
+  job-settings: &job-settings
     uses: ./.github/workflows/docker-build-simple.yml
-    with:
-      source_repo: 'li88iioo/Photonix'
-      docker_image_name: 'photonix'
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+jobs:
+  # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
+  build-photonix:
+    <<: *job-settings
+    with:
+      source_repo: 'li88iioo/Photonix'
+      docker_image_name: 'photonix'
+
   # 构建JefferyHcool/BiliNote后端（Dockerfile在backend目录）
   build-bili-note-backend:
-    uses: ./.github/workflows/docker-build-simple.yml
+    <<: *job-settings
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-backend'
       dockerfile_path: 'backend/Dockerfile'
       context_path: '.'
-    secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
   build-bili-note-frontend:
-    uses: ./.github/workflows/docker-build-simple.yml
+    <<: *job-settings
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-frontend'
       dockerfile_path: 'BillNote_frontend/Dockerfile'
       context_path: '.'
-    secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
