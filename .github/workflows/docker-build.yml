@@ -21,10 +21,6 @@ on:
         required: false
         type: string
         default: "."
-    secrets:
-      # 调用时需要传入的 secrets
-      DOCKERHUB_TOKEN:
-        required: true
 
 jobs:
   build:
