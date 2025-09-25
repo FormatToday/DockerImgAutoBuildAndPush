@@ -1,5 +1,7 @@
 # DockerImgAutoBuildAndPush
 
+[![构建状态](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/main.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/main.yml)
+
 ## 简介
 
 DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 GitHub Actions 工作流。它支持两种不同的项目结构：
