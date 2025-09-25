@@ -36,17 +36,17 @@ jobs:
         with:
           repository: ${{ inputs.source_repo }}
 
-      - name: 设置 QEMU
-        uses: docker/setup-qemu-action@master
-
-      - name: 设置 Docker Buildx
-        uses: docker/setup-buildx-action@master
-
       - name: 登录 Docker Hub
         uses: docker/login-action@master
         with:
           username: ${{ inputs.DOCKERHUB_USERNAME }}
           password: ${{ inputs.DOCKERHUB_TOKEN }}
+
+      - name: 设置 QEMU
+        uses: docker/setup-qemu-action@master
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@master
 
       - name: 获取当前日期
         id: date
