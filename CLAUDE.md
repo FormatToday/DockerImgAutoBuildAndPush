@@ -13,40 +13,33 @@ This repository provides a reusable GitHub Actions workflow for automatically bu
 
 The system consists of two main workflow files:
 
-1. `.github/workflows/docker-build-reusable.yml` - The core reusable workflow that handles the actual Docker build and push operations
-2. `.github/workflows/main.yml` - The main workflow that defines which repositories to build using matrix strategy
+1. `.github/workflows/docker-build.yml` - The core reusable workflow that handles the actual Docker build and push operations
+2. `.github/workflows/main.yml` - The main workflow that defines which repositories to build
 
 ### Key Features
 
 - Supports both single and multiple Dockerfile projects
 - Configurable Dockerfile path and build context
 - Automatic tag generation with date stamps and latest tags
-- Matrix-based builds for multiple repositories
 - Reusable workflow design
 
 ## Common Development Tasks
 
 ### Adding New Repositories
 
-To add a new repository to the build process:
+To add a new repository to the build process, add a new job in `main.yml`:
 
-1. For single Dockerfile projects, add a new entry to the matrix in `main.yml`:
-   ```yaml
-   - repo: 'username/repository'
-     image_name: 'image-name'
-   ```
-
-2. For multiple Dockerfile projects, add separate entries for each Dockerfile:
-   ```yaml
-   - repo: 'username/repository'
-     image_name: 'image-name-component1'
-     multi_dockerfiles: |
-       [{"path": "component1/Dockerfile", "context": "component1"}]
-   - repo: 'username/repository'
-     image_name: 'image-name-component2'
-     multi_dockerfiles: |
-       [{"path": "component2/Dockerfile", "context": "component2"}]
-   ```
+```yaml
+  # Build new project
+  build-new-project:
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      source_repo: 'username/repository'
+      docker_image_name: 'image-name'
+      # If Dockerfile is not in root, specify path
+      dockerfile_path: 'path/to/Dockerfile'
+      context_path: 'path/to/context'
+```
 
 ### Modifying Build Parameters
 
@@ -55,7 +48,6 @@ The reusable workflow supports several parameters:
 - `docker_image_name`: Required Docker Hub image name
 - `dockerfile_path`: Optional Dockerfile path (defaults to "Dockerfile")
 - `context_path`: Optional build context path (defaults to ".")
-- `multi_dockerfiles`: Optional JSON array for multiple Dockerfiles
 
 ### Testing Changes
 

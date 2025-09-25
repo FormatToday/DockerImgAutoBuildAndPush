@@ -33,37 +33,28 @@ DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 Git
 jobs:
   # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
   build-photonix:
-    uses: ./.github/workflows/docker-build-simple.yml
+    uses: ./.github/workflows/docker-build.yml
     with:
       source_repo: 'li88iioo/Photonix'
       docker_image_name: 'photonix'
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   # 构建JefferyHcool/BiliNote后端（Dockerfile在backend目录）
   build-bili-note-backend:
-    uses: ./.github/workflows/docker-build-simple.yml
+    uses: ./.github/workflows/docker-build.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-backend'
       dockerfile_path: 'backend/Dockerfile'
-      context_path: 'backend'
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      context_path: '.'
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
   build-bili-note-frontend:
-    uses: ./.github/workflows/docker-build-simple.yml
+    uses: ./.github/workflows/docker-build.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-frontend'
       dockerfile_path: 'BillNote_frontend/Dockerfile'
-      context_path: 'BillNote_frontend'
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      context_path: '.'
 ```
 
 ### 可重用工作流参数说明
@@ -82,14 +73,11 @@ jobs:
 ```yaml
   # 构建新项目
   build-new-project:
-    uses: ./.github/workflows/docker-build-simple.yml
+    uses: ./.github/workflows/docker-build.yml
     with:
       source_repo: 'username/repository'
       docker_image_name: 'image-name'
       # 如果Dockerfile不在根目录，指定路径
       dockerfile_path: 'path/to/Dockerfile'
       context_path: 'path/to/context'
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 ```

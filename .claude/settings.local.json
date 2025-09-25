@@ -7,7 +7,9 @@
       "Bash(gh repo view:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git clone:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
