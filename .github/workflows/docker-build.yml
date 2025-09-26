@@ -54,8 +54,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出当前仓库（用于获取自定义Dockerfile）
-        if: ${{ inputs.use_custom_dockerfile }}
+      - name: 检出当前仓库（用于获取自定义Dockerfile或脚本文件）
+        if: ${{ inputs.use_custom_dockerfile || inputs.use_compose_build }}
         uses: actions/checkout@main
         with:
           path: current-repo
