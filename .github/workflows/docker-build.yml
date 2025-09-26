@@ -144,11 +144,34 @@ jobs:
             # 创建临时文件
             temp_compose_file="$(mktemp)"
 
-            # 使用 sed 删除包含 image 字段的服务块（包括其所有属性）
-            sed -e "/image:/,/^[[:space:]]*[^[:space:]]/d" ${{ inputs.compose_file_path }} > "$temp_compose_file"
+            # 使用 awk 更可靠地删除包含 image 字段的服务块
+            awk '
+              /^services:/ { in_services = 1; print; next }
+              in_services && /^[[:space:]]*[^[:space:]]+:[[:space:]]*$/ {
+                current_service = $1
+                gsub(/:$/, "", current_service)
+                service_has_image = 0
+                print
+                next
+              }
+              in_services && /^[[:space:]]+image:/ {
+                service_has_image = 1
+                next
+              }
+              in_services && /^[[:space:]]+[a-zA-Z0-9_]+:/ && service_has_image == 1 {
+                # 如果是下一个服务的开始，并且上一个服务包含 image，则跳过
+                service_has_image = 0
+                next
+              }
+              in_services && service_has_image == 1 {
+                # 如果服务包含 image 字段，跳过该行
+                next
+              }
+              { print }
+            ' ${{ inputs.compose_file_path }} > "$temp_compose_file"
 
             # 修复可能的格式问题，删除多余的空行
-            sed -i "/^$/d" "$temp_compose_file"
+            sed -i '/^$/d' "$temp_compose_file"
 
             # 替换原始文件
             mv "$temp_compose_file" ${{ inputs.compose_file_path }}
