@@ -92,8 +92,8 @@ jobs:
       - name: 构建并且推送 Docker 镜像
         uses: docker/build-push-action@master
         with:
-          context: ${{ inputs.context_path == '.' && './target-repo' || './target-repo' }}
-          file: ${{ inputs.use_custom_dockerfile && './target-repo/' + inputs.custom_dockerfile_path || './target-repo/' + inputs.dockerfile_path }}
+          context: ./target-repo
+          file: ${{ inputs.use_custom_dockerfile && format('./target-repo/{0}', inputs.custom_dockerfile_path) || format('./target-repo/{0}', inputs.dockerfile_path) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
