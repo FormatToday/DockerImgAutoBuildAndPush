@@ -35,14 +35,14 @@ DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 Git
 jobs:
   # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
   build-photonix:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'li88iioo/Photonix'
       docker_image_name: 'photonix'
 
   # 构建JefferyHcool/BiliNote后端（Dockerfile在backend目录）
   build-bili-note-backend:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-backend'
@@ -51,7 +51,7 @@ jobs:
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
   build-bili-note-frontend:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-frontend'

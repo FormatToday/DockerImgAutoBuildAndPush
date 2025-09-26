@@ -26,7 +26,7 @@ DockerImgAutoBuildAndPush/
 
 ## 核心工作流文件
 
-### docker-build.yml
+### docker-build-new.yml
 
 这是核心的可重用工作流，负责实际的 Docker 构建和推送操作。它支持以下特性：
 
@@ -35,6 +35,8 @@ DockerImgAutoBuildAndPush/
 - 使用 docker-compose 构建
 - 自动标签生成（包括日期戳和 latest 标签）
 - 多架构镜像支持（通过 QEMU 和 Buildx）
+- 简化的路径管理
+- 消除重复代码，提高可维护性
 
 ### main.yml
 
@@ -49,7 +51,7 @@ DockerImgAutoBuildAndPush/
 ```yaml
   # 构建新项目
   build-new-project:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'username/repository'
       docker_image_name: 'image-name'

@@ -13,7 +13,7 @@ This repository provides a reusable GitHub Actions workflow for automatically bu
 
 The system consists of two main workflow files:
 
-1. `.github/workflows/docker-build.yml` - The core reusable workflow that handles the actual Docker build and push operations
+1. `.github/workflows/docker-build-new.yml` - The core reusable workflow that handles the actual Docker build and push operations
 2. `.github/workflows/main.yml` - The main workflow that defines which repositories to build
 
 ### Key Features
@@ -33,14 +33,14 @@ To add a new repository to the build process, add a new job in `main.yml`. Here 
 jobs:
   # Build li88iioo/Photonix project (single Dockerfile in root)
   build-photonix:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'li88iioo/Photonix'
       docker_image_name: 'photonix'
 
   # Build JefferyHcool/BiliNote backend (Dockerfile in backend directory)
   build-bili-note-backend:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-backend'
@@ -49,7 +49,7 @@ jobs:
 
   # Build JefferyHcool/BiliNote frontend (Dockerfile in BillNote_frontend directory)
   build-bili-note-frontend:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-new.yml
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-frontend'
@@ -68,7 +68,7 @@ The reusable workflow supports several parameters:
 ### Testing Changes
 
 工作流的测试和构建通过GitHub Actions自动触发。要测试更改：
-1. 修改工作流文件（例如：`.github/workflows/docker-build.yml` 或 `.github/workflows/main.yml`）。
+1. 修改工作流文件（例如：`.github/workflows/docker-build-new.yml` 或 `.github/workflows/main.yml`）。
 2. 提交并推送更改到仓库。
 3. 或者通过GitHub Actions界面手动触发工作流。
 
