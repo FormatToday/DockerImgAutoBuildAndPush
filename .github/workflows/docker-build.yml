@@ -138,7 +138,7 @@ jobs:
           echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
 
           # 构建镜像
-       # 预处理 docker-compose 文件，移除包含 image 字段的服务（只构建包含 build 的服务）
+          # 预处理 docker-compose 文件，移除包含 image 字段的服务（只构建包含 build 的服务）
           echo "预处理 docker-compose 文件，排除包含 image 字段的服务..."
           if [ -f "${{ inputs.compose_file_path }}" ]; then
             # 创建临时文件
