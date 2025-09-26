@@ -27,18 +27,34 @@ The system consists of two main workflow files:
 
 ### Adding New Repositories
 
-To add a new repository to the build process, add a new job in `main.yml`:
+To add a new repository to the build process, add a new job in `main.yml`. Here are some examples:
 
 ```yaml
-  # Build new project
-  build-new-project:
+jobs:
+  # Build li88iioo/Photonix project (single Dockerfile in root)
+  build-photonix:
     uses: ./.github/workflows/docker-build.yml
     with:
-      source_repo: 'username/repository'
-      docker_image_name: 'image-name'
-      # If Dockerfile is not in root, specify path
-      dockerfile_path: 'path/to/Dockerfile'
-      context_path: 'path/to/context'
+      source_repo: 'li88iioo/Photonix'
+      docker_image_name: 'photonix'
+
+  # Build JefferyHcool/BiliNote backend (Dockerfile in backend directory)
+  build-bili-note-backend:
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      source_repo: 'JefferyHcool/BiliNote'
+      docker_image_name: 'bili-note-backend'
+      dockerfile_path: 'backend/Dockerfile'
+      context_path: '.'
+
+  # Build JefferyHcool/BiliNote frontend (Dockerfile in BillNote_frontend directory)
+  build-bili-note-frontend:
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      source_repo: 'JefferyHcool/BiliNote'
+      docker_image_name: 'bili-note-frontend'
+      dockerfile_path: 'BillNote_frontend/Dockerfile'
+      context_path: '.'
 ```
 
 ### Modifying Build Parameters
@@ -51,7 +67,14 @@ The reusable workflow supports several parameters:
 
 ### Testing Changes
 
-To test changes to the workflows:
-1. Make changes to the workflow files
-2. Commit and push to trigger the scheduled builds
-3. Or manually trigger the workflow through the GitHub Actions interface
+工作流的测试和构建通过GitHub Actions自动触发。要测试更改：
+1. 修改工作流文件（例如：`.github/workflows/docker-build.yml` 或 `.github/workflows/main.yml`）。
+2. 提交并推送更改到仓库。
+3. 或者通过GitHub Actions界面手动触发工作流。
+
+**如何查看构建和测试状态：**
+1. 访问GitHub仓库的 "Actions" 标签页。
+2. 选择相应的工作流运行，查看其状态和日志。
+
+**Linting / 类型检查：**
+目前，此仓库中没有明确的linting或类型检查步骤。工作流主要侧重于Docker镜像的构建和推送。
