@@ -117,7 +117,8 @@ jobs:
           cd target-repo
           # 只有当 additional_files_to_copy 不为空数组时才执行 jq 命令
           if [ "${{ inputs.additional_files_to_copy }}" != "[]" ]; then
-            echo "${{ inputs.additional_files_to_copy }}" | jq -r '.[] | .source + "\t" + .destination' | while IFS=$'\t' read -r source_file destination_file; do
+            # 使用单引号包装输入以避免引号转义问题
+            echo '${{ inputs.additional_files_to_copy }}' | jq -r '.[] | .source + "\t" + .destination' | while IFS=$'\t' read -r source_file destination_file; do
               if [ -n "$source_file" ] && [ -f "$source_file" ]; then
                 echo "复制文件：$source_file 到 $destination_file"
                 cp "$source_file" "$destination_file"
