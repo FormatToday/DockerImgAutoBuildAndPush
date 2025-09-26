@@ -141,14 +141,17 @@ jobs:
           # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
           echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
           if [ -f "${{ inputs.compose_file_path }}" ]; then
-            # 将当前目录添加到PYTHONPATH以便能找到脚本
-            export PYTHONPATH="$(pwd):$PYTHONPATH"
-            
-            # 复制脚本到目标仓库目录
-            cp current-repo/scripts/filter-compose-services.py target-repo/
-            
-            # 使用独立的Python脚本处理docker-compose文件
-            cd target-repo && python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            # 检查脚本文件是否存在
+            if [ -f "current-repo/scripts/filter-compose-services.py" ]; then
+              # 复制脚本到目标仓库目录
+              cp current-repo/scripts/filter-compose-services.py target-repo/
+              
+              # 使用独立的Python脚本处理docker-compose文件
+              cd target-repo && python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            else
+              echo "错误: 找不到脚本文件 current-repo/scripts/filter-compose-services.py"
+              exit 1
+            fi
           fi
 
           docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
