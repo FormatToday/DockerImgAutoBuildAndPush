@@ -21,6 +21,16 @@ on:
         required: false
         type: string
         default: "."
+      # 是否使用自定义Dockerfile（位于当前仓库中）
+      use_custom_dockerfile:
+        required: false
+        type: boolean
+        default: false
+      # 自定义Dockerfile路径（当use_custom_dockerfile为true时使用）
+      custom_dockerfile_path:
+        required: false
+        type: string
+        default: ""
     secrets:
       # 调用时需要传入的 secrets
       DOCKERHUB_USERNAME:
@@ -35,6 +45,19 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: ${{ inputs.source_repo }}
+          path: target-repo
+
+      - name: 检出当前仓库（用于获取自定义Dockerfile）
+        if: ${{ inputs.use_custom_dockerfile }}
+        uses: actions/checkout@main
+        with:
+          path: current-repo
+
+      - name: 复制自定义Dockerfile到目标仓库
+        if: ${{ inputs.use_custom_dockerfile }}
+        run: |
+          mkdir -p target-repo/${{ inputs.custom_dockerfile_path }}
+          cp current-repo/${{ inputs.custom_dockerfile_path }} target-repo/${{ inputs.custom_dockerfile_path }}
 
       - name: 登录 Docker Hub
         uses: docker/login-action@master
@@ -69,8 +92,8 @@ jobs:
       - name: 构建并且推送 Docker 镜像
         uses: docker/build-push-action@master
         with:
-          context: ${{ inputs.context_path }}
-          file: ${{ inputs.dockerfile_path }}
+          context: ${{ inputs.context_path == '.' && 'target-repo' || inputs.context_path }}
+          file: ${{ inputs.use_custom_dockerfile && 'target-repo/' + inputs.custom_dockerfile_path || (inputs.context_path == '.' ? 'target-repo/' + inputs.dockerfile_path : inputs.dockerfile_path) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
