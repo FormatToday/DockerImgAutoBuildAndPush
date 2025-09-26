@@ -138,18 +138,42 @@ jobs:
           echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
 
           # 构建镜像
-          # 预处理 docker-compose 文件，移除包含 image 字段的服务（只构建包含 build 的服务）
-          echo "预处理 docker-compose 文件，排除包含 image 字段的服务..."
+          # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
+          echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
           if [ -f "${{ inputs.compose_file_path }}" ]; then
             # 创建临时文件
             temp_compose_file="$(mktemp)"
+            
+            # 复制原始文件
+            cp ${{ inputs.compose_file_path }} "$temp_compose_file"
+            
+            # 使用Python脚本处理docker-compose文件
+            python3 -c "
+import yaml
+import sys
 
-            # 简单而可靠的 sed 命令：删除包含 image 字段的整个服务块
-            sed '/^[[:space:]]*image:/,/^ *[a-zA-Z0-9_]/d' ${{ inputs.compose_file_path }} > "$temp_compose_file"
+# 读取docker-compose文件
+with open('$temp_compose_file', 'r') as f:
+    data = yaml.safe_load(f)
 
-            # 清理空行
-            sed -i '/^$/d' "$temp_compose_file"
+# 检查services是否存在
+if 'services' in data:
+    # 过滤服务，只保留有build或image字段的服务
+    filtered_services = {}
+    for service_name, service_config in data['services'].items():
+        if 'build' in service_config or 'image' in service_config:
+            filtered_services[service_name] = service_config
+        else:
+            print(f'移除服务 {service_name}，因为它既没有build也没有image字段')
+    
+    # 更新services
+    data['services'] = filtered_services
 
+# 写入处理后的文件
+with open('$temp_compose_file', 'w') as f:
+    yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+"
+            
             # 替换原始文件
             mv "$temp_compose_file" ${{ inputs.compose_file_path }}
           fi
