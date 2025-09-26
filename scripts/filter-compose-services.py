@@ -48,7 +48,11 @@ def filter_services(compose_file):
             print(f"警告: 服务 {service_name} 的配置不是字典类型，将被移除")
             continue
             
-        if 'build' in service_config or 'image' in service_config:
+        # 检查build或image字段是否存在且不为空
+        has_build = 'build' in service_config and service_config['build'] is not None and service_config['build'] != ''
+        has_image = 'image' in service_config and service_config['image'] is not None and service_config['image'] != ''
+        
+        if has_build or has_image:
             filtered_services[service_name] = service_config
         else:
             print(f"移除服务 {service_name}，因为它既没有build也没有image字段")

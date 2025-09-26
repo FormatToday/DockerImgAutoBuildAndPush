@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+  
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+  
+  nginx: null
+  # 或者nginx服务配置不是字典类型
+  
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: myapp
+
+volumes:
+  postgres_data:

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # 应该保留 - 有build字段
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+  
+  # 应该保留 - 有build字段（复杂结构）
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+  
+  # 应该移除 - 既没有build也没有image字段
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+  
+  # 应该保留 - 有image字段
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: myapp
+  
+  # 应该移除 - build字段为空
+  redis:
+    build:
+    ports:
+      - "6379:6379"
+  
+  # 应该移除 - image字段为空
+  cache:
+    image:
+    ports:
+      - "11211:11211"
+  
+  # 应该移除 - 配置不是字典类型
+  null-service: null
+
+volumes:
+  postgres_data:
