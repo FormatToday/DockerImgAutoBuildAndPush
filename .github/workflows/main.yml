@@ -31,7 +31,7 @@ jobs:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note-backend'
       dockerfile_path: 'backend/Dockerfile'
-      context_path: '..'
+      context_path: '.'
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
   build-bili-note-frontend:
