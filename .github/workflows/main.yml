@@ -22,29 +22,29 @@ jobs:
       docker_image_name: 'photonix'
 
   # 构建JefferyHcool/BiliNote后端（使用自定义Dockerfile解决路径问题）
-  build-bili-note-backend:
-    uses: ./.github/workflows/docker-build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      source_repo: 'JefferyHcool/BiliNote'
-      docker_image_name: 'bili-note-backend'
-      use_custom_dockerfile: true
-      custom_dockerfile_path: 'custom-dockerfiles/bili-note-backend/Dockerfile'
-      context_path: '.'
+  # build-bili-note-backend:
+  #   uses: ./.github/workflows/docker-build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'JefferyHcool/BiliNote'
+  #     docker_image_name: 'bili-note-backend'
+  #     use_custom_dockerfile: true
+  #     custom_dockerfile_path: 'custom-dockerfiles/bili-note-backend/Dockerfile'
+  #     context_path: '.'
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
-  build-bili-note-frontend:
-    uses: ./.github/workflows/docker-build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      source_repo: 'JefferyHcool/BiliNote'
-      docker_image_name: 'bili-note-frontend'
-      dockerfile_path: 'BillNote_frontend/Dockerfile'
-      context_path: '.'
+  # build-bili-note-frontend:
+  #   uses: ./.github/workflows/docker-build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'JefferyHcool/BiliNote'
+  #     docker_image_name: 'bili-note-frontend'
+  #     dockerfile_path: 'BillNote_frontend/Dockerfile'
+  #     context_path: '.'
 
   # 清除旧的workflow运行记录
   cleanup-workflow-runs:
@@ -57,3 +57,18 @@ jobs:
           repository: ${{ github.repository }}
           retain_days: 0
           keep_minimum_runs: 2
+
+  # 使用docker-compose构建BiliNote项目（新方法）
+  build-bili-note-with-compose:
+    needs: [build-photonix]
+    uses: ./.github/workflows/docker-build.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    with:
+      source_repo: 'JefferyHcool/BiliNote'
+      docker_image_name: 'bili-note'
+      dockerfile_path: 'Dockerfile'
+      context_path: '.'
+      use_custom_dockerfile: true
+      custom_dockerfile_path: 'docker-compose-build/Dockerfile.compose'
