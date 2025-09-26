@@ -32,8 +32,8 @@ jobs:
       use_compose_build: true
       compose_file_path: 'docker-compose.yml'
       additional_files_to_copy: '[{"source": ".env.example", "destination": ".env"}]'
-      
- # 清除旧的workflow运行记录
+
+  # 清除旧的workflow运行记录
   cleanup-workflow-runs:
     runs-on: ubuntu-latest
     steps:

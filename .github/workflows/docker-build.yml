@@ -164,7 +164,7 @@ if 'services' in data:
         if 'build' in service_config or 'image' in service_config:
             filtered_services[service_name] = service_config
         else:
-            print(f'移除服务 {service_name}，因为它既没有build也没有image字段')
+            print('移除服务 {}，因为它既没有build也没有image字段'.format(service_name))
     
     # 更新services
     data['services'] = filtered_services
