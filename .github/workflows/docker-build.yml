@@ -56,8 +56,8 @@ jobs:
       - name: 复制自定义Dockerfile到目标仓库
         if: ${{ inputs.use_custom_dockerfile }}
         run: |
-          mkdir -p target-repo/$(dirname ${{ inputs.custom_dockerfile_path }})
-          cp current-repo/${{ inputs.custom_dockerfile_path }} target-repo/${{ inputs.custom_dockerfile_path }}
+          mkdir -p target-repo/$(dirname "${{ inputs.custom_dockerfile_path }}")
+          cp "current-repo/${{ inputs.custom_dockerfile_path }}" "target-repo/${{ inputs.custom_dockerfile_path }}"
 
       - name: 登录 Docker Hub
         uses: docker/login-action@master
