@@ -153,48 +153,39 @@ jobs:
 
             echo "处理服务: $service"
 
-            # 使用docker-compose images获取服务的实际镜像ID
-            echo "获取服务 $service 的镜像ID..."
-            image_id=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env images -q "$service")
+            # 构建可能的镜像名称（docker-compose会使用目录名作为前缀）
+            possible_image_names=(
+              "$service"
+              "$project_name-$service"
+              "$project_name_$service"
+              "${project_name}-${service}"
+              "${project_name}_${service}"
+            )
 
-            if [ -n "$image_id" ]; then
-              echo "找到镜像ID: $image_id"
-              # 使用镜像ID进行标记
-              if docker tag "$image_id" "$target_image_name:$tag"; then
-                echo "成功为镜像 $image_id 打标签 $target_image_name:$tag"
-                docker tag "$image_id" "$target_image_name:latest"
-
-                # 推送镜像
-                echo "推送镜像 $target_image_name:$tag"
-                docker push "$target_image_name:$tag"
-                echo "推送镜像 $target_image_name:latest"
-                docker push "$target_image_name:latest"
-              else
-                echo "为镜像 $image_id 打标签失败"
-                echo "错误: 无法为服务 $service 创建或标记镜像"
-                exit 1
-              fi
-            else
-              echo "未找到服务 $service 的镜像ID"
-              # 尝试使用传统方式（服务名）
-              echo "尝试使用服务名标记..."
-              if docker tag "$service" "$target_image_name:$tag" 2>/dev/null; then
-                echo "成功为服务 $service 打标签"
-                docker tag "$service" "$target_image_name:latest"
+            tagged_successfully=false
+            for image_name in "${possible_image_names[@]}"; do
+              echo "尝试镜像名称: $image_name"
+              if docker tag "$image_name" "$target_image_name:$tag" 2>/dev/null; then
+                echo "成功为镜像 $image_name 打标签 $target_image_name:$tag"
+                docker tag "$image_name" "$target_image_name:latest"
 
                 # 推送镜像
                 echo "推送镜像 $target_image_name:$tag"
                 docker push "$target_image_name:$tag"
                 echo "推送镜像 $target_image_name:latest"
                 docker push "$target_image_name:latest"
-              else
-                echo "使用服务名标记也失败"
-                # 列出所有镜像以帮助调试
-                echo "当前所有镜像:"
-                docker images
-                echo "错误: 无法为服务 $service 找到或标记镜像"
-                exit 1
+
+                tagged_successfully=true
+                break
               fi
+            done
+
+            if [ "$tagged_successfully" = false ]; then
+              echo "错误: 无法为服务 $service 找到或标记镜像"
+              # 列出所有镜像以帮助调试
+              echo "当前所有镜像:"
+              docker images
+              exit 1
             fi
           done
 
