@@ -141,41 +141,14 @@ jobs:
           # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
           echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
           if [ -f "${{ inputs.compose_file_path }}" ]; then
-            # 创建临时文件
-            temp_compose_file="$(mktemp)"
+            # 将当前目录添加到PYTHONPATH以便能找到脚本
+            export PYTHONPATH="$(pwd):$PYTHONPATH"
             
-            # 复制原始文件
-            cp ${{ inputs.compose_file_path }} "$temp_compose_file"
+            # 复制脚本到目标仓库目录
+            cp ./scripts/filter-compose-services.py target-repo/
             
-            # 使用Python脚本处理docker-compose文件
-            python3 -c "
-import yaml
-import sys
-
-# 读取docker-compose文件
-with open('$temp_compose_file', 'r') as f:
-    data = yaml.safe_load(f)
-
-# 检查services是否存在
-if 'services' in data:
-    # 过滤服务，只保留有build或image字段的服务
-    filtered_services = {}
-    for service_name, service_config in data['services'].items():
-        if 'build' in service_config or 'image' in service_config:
-            filtered_services[service_name] = service_config
-        else:
-            print('移除服务 {}，因为它既没有build也没有image字段'.format(service_name))
-    
-    # 更新services
-    data['services'] = filtered_services
-
-# 写入处理后的文件
-with open('$temp_compose_file', 'w') as f:
-    yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
-"
-            
-            # 替换原始文件
-            mv "$temp_compose_file" ${{ inputs.compose_file_path }}
+            # 使用独立的Python脚本处理docker-compose文件
+            cd target-repo && python3 filter-compose-services.py ${{ inputs.compose_file_path }}
           fi
 
           docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
