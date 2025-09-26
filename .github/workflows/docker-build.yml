@@ -131,17 +131,17 @@ jobs:
             echo "没有需要复制的额外文件。"
           fi
 
-          # 将标签写入 .env 文件，供 docker-compose 使用
-          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > .env
-          echo "DOCKER_IMAGE_LATEST=latest" >> .env
-          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
-          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> .env
+          # 将标签写入 docker-build-env 文件，供 docker-compose 使用
+          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > docker-build-env
+          echo "DOCKER_IMAGE_LATEST=latest" >> docker-build-env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> docker-build-env
+          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
 
           # 构建镜像
-          docker compose -f ${{ inputs.compose_file_path }} build
+          docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
 
           # 为服务打标签并推送
-          services=$(docker compose -f ${{ inputs.compose_file_path }} config --services)
+          services=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env config --services)
           for service in $services; do
             # 重新标记服务镜像以包含正确的标签
             docker tag "$service" "${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}-${service}:${{ steps.date.outputs.tag }}"
