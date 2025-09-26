@@ -12,7 +12,7 @@ jobs:
 
 
   # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
-  构建Photonix:
+  build-photonix:
     uses: ./.github/workflows/docker-build.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -22,7 +22,7 @@ jobs:
       docker_image_name: 'photonix'
 
   # 构建JefferyHcool/BiliNote后端（使用自定义Dockerfile解决路径问题）
-  构建Bilinote后端:
+  build-bili-note-backend:
     uses: ./.github/workflows/docker-build.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -35,7 +35,7 @@ jobs:
       context_path: '.'
 
   # 构建JefferyHcool/BiliNote前端（Dockerfile在BillNote_frontend目录）
-  构建Bilinote前端:
+  build-bili-note-frontend:
     uses: ./.github/workflows/docker-build.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
