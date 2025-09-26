@@ -56,8 +56,6 @@ jobs:
       docker_image_name: 'bili-note'
       dockerfile_path: 'Dockerfile'
       context_path: '.'
-      use_custom_dockerfile: true
-      custom_dockerfile_path: 'docker-compose-build/Dockerfile.compose'
       
  # 清除旧的workflow运行记录
   cleanup-workflow-runs:
