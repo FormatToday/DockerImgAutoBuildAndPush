@@ -10,7 +10,7 @@ on:
 
 jobs:
 
-  # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
+  # 使用Dockerfile构建li88iioo/Photonix
   build-photonix:
     uses: ./.github/workflows/docker-build.yml
     secrets:
@@ -20,8 +20,8 @@ jobs:
       source_repo: 'li88iioo/Photonix'
       docker_image_name: 'photonix'
 
-  # 使用docker-compose构建BiliNote项目（推荐方式）
-  build-bili-note-with-compose:
+  # 使用docker-compose构建BiliNote
+  build-bilinote:
     uses: ./.github/workflows/docker-build.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -34,7 +34,7 @@ jobs:
       additional_files_to_copy: '[{"source": ".env.example", "destination": ".env"}]'
 
   # 清除旧的workflow运行记录
-  cleanup-workflow-runs:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - name: 删除旧 Actions
