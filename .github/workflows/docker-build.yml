@@ -108,6 +108,7 @@ jobs:
         if: ${{ inputs.use_compose_build }}
         run: |
           cd target-repo
+          ls -a
           docker compose -f ${{ inputs.compose_file_path }} build
           docker compose -f ${{ inputs.compose_file_path }} push
 
