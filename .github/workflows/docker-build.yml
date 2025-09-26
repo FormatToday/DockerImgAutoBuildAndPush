@@ -35,11 +35,11 @@ on:
         required: false
         type: boolean
         default: false
-      # docker-compose文件路径
-      compose_file_path:
+      # 其他需要复制的文件，格式为JSON数组字符串: [{"source": "path/to/source", "destination": "path/to/destination"}]
+      additional_files_to_copy:
         required: false
         type: string
-        default: "docker-compose.yml"
+        default: "[]"    
     secrets:
       # 调用时需要传入的 secrets
       DOCKERHUB_USERNAME:
@@ -80,11 +80,14 @@ jobs:
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@master
 
-      - name: 安装 Docker Compose
+      - name: 设置 Docker Compose
+        uses: docker/setup-compose-action@main
+
+      - name: 安装 jq
         if: ${{ inputs.use_compose_build }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker-compose
+          sudo apt-get install -y jq
 
       - name: 获取当前日期
         id: date
@@ -109,6 +112,14 @@ jobs:
         run: |
           cd target-repo
           ls -a
+          echo "${{ inputs.additional_files_to_copy }}" | jq -r '.[] | .source + "\t" + .destination' | while IFS=$'\t' read -r source_file destination_file; do
+            if [ a_n "$source_file" ] && [ -f "$source_file" ]; then
+              echo "复制文件：$source_file 到 $destination_file"
+              cp "$source_file" "$destination_file"
+            else
+              echo "源文件不存在或未指定：$source_file"
+            fi
+          done
           docker compose -f ${{ inputs.compose_file_path }} build
           docker compose -f ${{ inputs.compose_file_path }} push
 
