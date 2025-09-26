@@ -9,7 +9,9 @@
       "Bash(git push:*)",
       "Bash(cat:*)",
       "Bash(git clone:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git commit:*)",
+      "*"
     ],
     "deny": [],
     "ask": []
