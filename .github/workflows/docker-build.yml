@@ -462,3 +462,379 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+\t' read -r source_file destination_file; do
+              if [ -n "$source_file" ] && [ -f "$source_file" ]; then
+                echo "复制文件：$source_file 到 $destination_file"
+                cp "$source_file" "$destination_file"
+              else
+                echo "源文件不存在或未指定：$source_file"
+              fi
+            done
+          else
+            echo "没有需要复制的额外文件。"
+          fi
+
+          # 将标签写入 docker-build-env 文件，供 docker-compose 使用
+          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > docker-build-env
+          echo "DOCKER_IMAGE_LATEST=latest" >> docker-build-env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> docker-build-env
+          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
+
+          # 构建镜像
+          # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
+          echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
+          if [ -f "${{ inputs.compose_file_path }}" ]; then
+            # 检查脚本文件是否存在
+            if [ -f "../current-repo/scripts/filter-compose-services.py" ]; then
+              # 复制脚本到当前目录
+              cp ../current-repo/scripts/filter-compose-services.py ./
+              
+              # 使用独立的Python脚本处理docker-compose文件
+              python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            else
+              echo "错误: 找不到脚本文件 ../current-repo/scripts/filter-compose-services.py"
+              exit 1
+            fi
+          fi
+
+          # 获取项目名称（用于构建镜像名）
+          project_name=$(basename $(pwd))
+          echo "项目名称: $project_name"
+
+          # 为服务打标签并推送
+          services=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env config --services)
+          for service in $services; do
+            # 构建目标镜像名称
+            target_image_name="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}-${service}"
+            tag="${{ steps.date.outputs.tag }}"
+
+            echo "处理服务: $service"
+
+            # 构建可能的镜像名称（docker-compose会使用目录名作为前缀）
+            possible_image_names=(
+              "$service"
+              "$project_name-$service"
+              "$project_name_$service"
+              "${project_name}-${service}"
+              "${project_name}_${service}"
+            )
+
+            tagged_successfully=false
+            for image_name in "${possible_image_names[@]}"; do
+              echo "尝试镜像名称: $image_name"
+              if docker tag "$image_name" "$target_image_name:$tag" 2>/dev/null; then
+                echo "成功为镜像 $image_name 打标签 $target_image_name:$tag"
+                docker tag "$image_name" "$target_image_name:latest"
+
+                # 推送镜像
+                echo "推送镜像 $target_image_name:$tag"
+                docker push "$target_image_name:$tag"
+                echo "推送镜像 $target_image_name:latest"
+                docker push "$target_image_name:latest"
+
+                tagged_successfully=true
+                break
+              fi
+            done
+
+            if [ "$tagged_successfully" = false ]; then
+              echo "错误: 无法为服务 $service 找到或标记镜像"
+              # 列出所有镜像以帮助调试
+              echo "当前所有镜像:"
+              docker images
+              exit 1
+            fi
+          done
+
+      - name: 构建并且推送 Docker 镜像
+        if: ${{ !inputs.use_compose_build }}
+        uses: docker/build-push-action@master
+        with:
+          context: ./target-repo
+          file: ${{ inputs.use_custom_dockerfile && format('./target-repo/{0}', inputs.custom_dockerfile_path) || format('./target-repo/{0}', inputs.dockerfile_path) }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+\t' read -r source_file destination_file; do
+              if [ -n "$source_file" ] && [ -f "target-repo/$source_file" ]; then
+                echo "复制文件：$source_file 到 $destination_file"
+                cp "target-repo/$source_file" "target-repo/$destination_file"
+              else
+                echo "源文件不存在或未指定：$source_file"
+              fi
+            done
+          else
+            echo "没有需要复制的额外文件。"
+          fi
+
+          # 将标签写入 docker-build-env 文件，供 docker-compose 使用
+          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > target-repo/docker-build-env
+          echo "DOCKER_IMAGE_LATEST=latest" >> target-repo/docker-build-env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> target-repo/docker-build-env
+          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> target-repo/docker-build-env
+
+          # 构建镜像
+          # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
+          echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
+          if [ -f "target-repo/${{ inputs.compose_file_path }}" ]; then
+            # 检查脚本文件是否存在
+            if [ -f "current-repo/scripts/filter-compose-services.py" ]; then
+              # 复制脚本到目标仓库目录
+              cp current-repo/scripts/filter-compose-services.py target-repo/
+              
+              # 使用独立的Python脚本处理docker-compose文件
+              cd target-repo && python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            else
+              echo "错误: 找不到脚本文件 current-repo/scripts/filter-compose-services.py"
+              exit 1
+            fi
+          fi
+
+          cd target-repo && docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
+
+          # 获取项目名称（用于构建镜像名）
+          project_name=$(basename $(pwd))
+          echo "项目名称: $project_name"
+
+          # 为服务打标签并推送
+          services=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env config --services)
+          for service in $services; do
+            # 构建目标镜像名称
+            target_image_name="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}-${service}"
+            tag="${{ steps.date.outputs.tag }}"
+
+            echo "处理服务: $service"
+
+            # 构建可能的镜像名称（docker-compose会使用目录名作为前缀）
+            possible_image_names=(
+              "$service"
+              "$project_name-$service"
+              "$project_name_$service"
+              "${project_name}-${service}"
+              "${project_name}_${service}"
+            )
+
+            tagged_successfully=false
+            for image_name in "${possible_image_names[@]}"; do
+              echo "尝试镜像名称: $image_name"
+              if docker tag "$image_name" "$target_image_name:$tag" 2>/dev/null; then
+                echo "成功为镜像 $image_name 打标签 $target_image_name:$tag"
+                docker tag "$image_name" "$target_image_name:latest"
+
+                # 推送镜像
+                echo "推送镜像 $target_image_name:$tag"
+                docker push "$target_image_name:$tag"
+                echo "推送镜像 $target_image_name:latest"
+                docker push "$target_image_name:latest"
+
+                tagged_successfully=true
+                break
+              fi
+            done
+
+            if [ "$tagged_successfully" = false ]; then
+              echo "错误: 无法为服务 $service 找到或标记镜像"
+              # 列出所有镜像以帮助调试
+              echo "当前所有镜像:"
+              docker images
+              exit 1
+            fi
+          done
+
+      - name: 构建并且推送 Docker 镜像
+        if: ${{ !inputs.use_compose_build }}
+        uses: docker/build-push-action@master
+        with:
+          context: ./target-repo
+          file: ${{ inputs.use_custom_dockerfile && format('./target-repo/{0}', inputs.custom_dockerfile_path) || format('./target-repo/{0}', inputs.dockerfile_path) }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+\t' read -r source_file destination_file; do
+              if [ -n "$source_file" ] && [ -f "$source_file" ]; then
+                echo "复制文件：$source_file 到 $destination_file"
+                cp "$source_file" "$destination_file"
+              else
+                echo "源文件不存在或未指定：$source_file"
+              fi
+            done
+          else
+            echo "没有需要复制的额外文件。"
+          fi
+
+          # 将标签写入 docker-build-env 文件，供 docker-compose 使用
+          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > docker-build-env
+          echo "DOCKER_IMAGE_LATEST=latest" >> docker-build-env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> docker-build-env
+          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
+
+          # 构建镜像
+          # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
+          echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
+          if [ -f "${{ inputs.compose_file_path }}" ]; then
+            # 检查脚本文件是否存在
+            if [ -f "../current-repo/scripts/filter-compose-services.py" ]; then
+              # 复制脚本到当前目录
+              cp ../current-repo/scripts/filter-compose-services.py ./
+              
+              # 使用独立的Python脚本处理docker-compose文件
+              python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            else
+              echo "错误: 找不到脚本文件 ../current-repo/scripts/filter-compose-services.py"
+              exit 1
+            fi
+          fi
+
+          # 获取项目名称（用于构建镜像名）
+          project_name=$(basename $(pwd))
+          echo "项目名称: $project_name"
+
+          # 为服务打标签并推送
+          services=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env config --services)
+          for service in $services; do
+            # 构建目标镜像名称
+            target_image_name="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}-${service}"
+            tag="${{ steps.date.outputs.tag }}"
+
+            echo "处理服务: $service"
+
+            # 构建可能的镜像名称（docker-compose会使用目录名作为前缀）
+            possible_image_names=(
+              "$service"
+              "$project_name-$service"
+              "$project_name_$service"
+              "${project_name}-${service}"
+              "${project_name}_${service}"
+            )
+
+            tagged_successfully=false
+            for image_name in "${possible_image_names[@]}"; do
+              echo "尝试镜像名称: $image_name"
+              if docker tag "$image_name" "$target_image_name:$tag" 2>/dev/null; then
+                echo "成功为镜像 $image_name 打标签 $target_image_name:$tag"
+                docker tag "$image_name" "$target_image_name:latest"
+
+                # 推送镜像
+                echo "推送镜像 $target_image_name:$tag"
+                docker push "$target_image_name:$tag"
+                echo "推送镜像 $target_image_name:latest"
+                docker push "$target_image_name:latest"
+
+                tagged_successfully=true
+                break
+              fi
+            done
+
+            if [ "$tagged_successfully" = false ]; then
+              echo "错误: 无法为服务 $service 找到或标记镜像"
+              # 列出所有镜像以帮助调试
+              echo "当前所有镜像:"
+              docker images
+              exit 1
+            fi
+          done
+
+      - name: 构建并且推送 Docker 镜像
+        if: ${{ !inputs.use_compose_build }}
+        uses: docker/build-push-action@master
+        with:
+          context: ./target-repo
+          file: ${{ inputs.use_custom_dockerfile && format('./target-repo/{0}', inputs.custom_dockerfile_path) || format('./target-repo/{0}', inputs.dockerfile_path) }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+\t' read -r source_file destination_file; do
+              if [ -n "$source_file" ] && [ -f "target-repo/$source_file" ]; then
+                echo "复制文件：$source_file 到 $destination_file"
+                cp "target-repo/$source_file" "target-repo/$destination_file"
+              else
+                echo "源文件不存在或未指定：$source_file"
+              fi
+            done
+          else
+            echo "没有需要复制的额外文件。"
+          fi
+
+          # 将标签写入 docker-build-env 文件，供 docker-compose 使用
+          echo "DOCKER_IMAGE_TAG=${{ steps.date.outputs.tag }}" > target-repo/docker-build-env
+          echo "DOCKER_IMAGE_LATEST=latest" >> target-repo/docker-build-env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> target-repo/docker-build-env
+          echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> target-repo/docker-build-env
+
+          # 构建镜像
+          # 预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务
+          echo "预处理 docker-compose 文件，只移除既没有 build 也没有 image 字段的服务..."
+          if [ -f "target-repo/${{ inputs.compose_file_path }}" ]; then
+            # 检查脚本文件是否存在
+            if [ -f "current-repo/scripts/filter-compose-services.py" ]; then
+              # 复制脚本到目标仓库目录
+              cp current-repo/scripts/filter-compose-services.py target-repo/
+              
+              # 使用独立的Python脚本处理docker-compose文件
+              cd target-repo && python3 filter-compose-services.py ${{ inputs.compose_file_path }}
+            else
+              echo "错误: 找不到脚本文件 current-repo/scripts/filter-compose-services.py"
+              exit 1
+            fi
+          fi
+
+          cd target-repo && docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
+
+          # 获取项目名称（用于构建镜像名）
+          project_name=$(basename $(pwd))
+          echo "项目名称: $project_name"
+
+          # 为服务打标签并推送
+          services=$(docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env config --services)
+          for service in $services; do
+            # 构建目标镜像名称
+            target_image_name="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}-${service}"
+            tag="${{ steps.date.outputs.tag }}"
+
+            echo "处理服务: $service"
+
+            # 构建可能的镜像名称（docker-compose会使用目录名作为前缀）
+            possible_image_names=(
+              "$service"
+              "$project_name-$service"
+              "$project_name_$service"
+              "${project_name}-${service}"
+              "${project_name}_${service}"
+            )
+
+            tagged_successfully=false
+            for image_name in "${possible_image_names[@]}"; do
+              echo "尝试镜像名称: $image_name"
+              if docker tag "$image_name" "$target_image_name:$tag" 2>/dev/null; then
+                echo "成功为镜像 $image_name 打标签 $target_image_name:$tag"
+                docker tag "$image_name" "$target_image_name:latest"
+
+                # 推送镜像
+                echo "推送镜像 $target_image_name:$tag"
+                docker push "$target_image_name:$tag"
+                echo "推送镜像 $target_image_name:latest"
+                docker push "$target_image_name:latest"
+
+                tagged_successfully=true
+                break
+              fi
+            done
+
+            if [ "$tagged_successfully" = false ]; then
+              echo "错误: 无法为服务 $service 找到或标记镜像"
+              # 列出所有镜像以帮助调试
+              echo "当前所有镜像:"
+              docker images
+              exit 1
+            fi
+          done
+
+      - name: 构建并且推送 Docker 镜像
+        if: ${{ !inputs.use_compose_build }}
+        uses: docker/build-push-action@master
+        with:
+          context: ./target-repo
+          file: ${{ inputs.use_custom_dockerfile && format('./target-repo/{0}', inputs.custom_dockerfile_path) || format('./target-repo/{0}', inputs.dockerfile_path) }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
