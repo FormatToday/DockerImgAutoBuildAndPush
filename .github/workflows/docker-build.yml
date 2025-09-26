@@ -138,6 +138,22 @@ jobs:
           echo "DOCKER_IMAGE_NAME=${{ inputs.docker_image_name }}" >> docker-build-env
 
           # 构建镜像
+       # 预处理 docker-compose 文件，移除包含 image 字段的服务（只构建包含 build 的服务）
+          echo "预处理 docker-compose 文件，排除包含 image 字段的服务..."
+          if [ -f "${{ inputs.compose_file_path }}" ]; then
+            # 创建临时文件
+            temp_compose_file="$(mktemp)"
+
+            # 使用 sed 删除包含 image 字段的服务块（包括其所有属性）
+            sed -e "/image:/,/^[[:space:]]*[^[:space:]]/d" ${{ inputs.compose_file_path }} > "$temp_compose_file"
+
+            # 修复可能的格式问题，删除多余的空行
+            sed -i "/^$/d" "$temp_compose_file"
+
+            # 替换原始文件
+            mv "$temp_compose_file" ${{ inputs.compose_file_path }}
+          fi
+
           docker compose -f ${{ inputs.compose_file_path }} --env-file docker-build-env build
 
           # 获取项目名称（用于构建镜像名）
