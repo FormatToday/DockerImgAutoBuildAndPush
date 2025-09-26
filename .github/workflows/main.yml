@@ -45,7 +45,7 @@ jobs:
   #     dockerfile_path: 'BillNote_frontend/Dockerfile'
   #     context_path: '.'
 
-  # 使用docker-compose构建BiliNote项目（新方法）
+  # 构建JefferyHcool/BiliNote项目（新方法，使用项目原有结构）
   build-bili-note-with-compose:
     uses: ./.github/workflows/docker-build.yml
     secrets:
@@ -54,7 +54,7 @@ jobs:
     with:
       source_repo: 'JefferyHcool/BiliNote'
       docker_image_name: 'bili-note'
-      dockerfile_path: 'Dockerfile'
+      dockerfile_path: 'BillNote_frontend/Dockerfile'
       context_path: '.'
       
  # 清除旧的workflow运行记录
