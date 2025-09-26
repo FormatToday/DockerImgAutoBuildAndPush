@@ -35,6 +35,10 @@ on:
         required: false
         type: boolean
         default: false
+      compose_file_path:
+        required: false
+        type: string
+        default: "docker-compose.yml"
       # 其他需要复制的文件，格式为JSON数组字符串: [{"source": "path/to/source", "destination": "path/to/destination"}]
       additional_files_to_copy:
         required: false
@@ -111,7 +115,6 @@ jobs:
         if: ${{ inputs.use_compose_build }}
         run: |
           cd target-repo
-          ls -a
           echo "${{ inputs.additional_files_to_copy }}" | jq -r '.[] | .source + "\t" + .destination' | while IFS=$'\t' read -r source_file destination_file; do
             if [ a_n "$source_file" ] && [ -f "$source_file" ]; then
               echo "复制文件：$source_file 到 $destination_file"
