@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-过滤docker-compose.yml文件中的服务，只保留包含build或image字段的服务
+过滤docker-compose.yml文件中的服务，只保留包含build字段的服务
+移除只有image字段的服务（无需构建的服务）
 """
 
 import yaml
@@ -8,7 +9,7 @@ import sys
 import os
 
 def filter_services(compose_file):
-    """过滤服务，只保留有build或image字段的服务"""
+    """过滤服务，只保留有build字段的服务，移除只有image字段的服务"""
     # 检查文件是否存在
     if not os.path.exists(compose_file):
         print(f"错误: 文件 {compose_file} 不存在")
@@ -38,16 +39,16 @@ def filter_services(compose_file):
         print("警告: 文件中没有找到services字段")
         return False
     
-    # 过滤服务，只保留有build或image字段的服务
+    # 过滤服务，只保留有build字段的服务（移除只有image字段的服务）
     original_count = len(data['services'])
     filtered_services = {}
-    
+
     for service_name, service_config in data['services'].items():
         # 确保service_config是字典类型
         if not isinstance(service_config, dict):
             print(f"警告: 服务 {service_name} 的配置不是字典类型，将被移除")
             continue
-            
+
         # 处理build字段
         has_build = False
         if 'build' in service_config:
@@ -56,20 +57,17 @@ def filter_services(compose_file):
             if build_value is not None and build_value != '' and build_value != {}:
                 has_build = True
 
-        # 处理image字段
-        has_image = False
-        if 'image' in service_config:
-            image_value = service_config['image']
-            # 检查image字段是否为有效值（不是None、空字符串）
-            if image_value is not None and image_value != '':
-                has_image = True
-        
-        if has_build or has_image:
+        # 只保留有build字段的服务
+        if has_build:
             filtered_services[service_name] = service_config
+            print(f"保留服务 {service_name}，因为它有build字段")
         else:
-            print(f"移除服务 {service_name}，因为它既没有build也没有image字段")
-            print(f"  build字段: {service_config.get('build', '不存在')}")
-            print(f"  image字段: {service_config.get('image', '不存在')}")
+            print(f"移除服务 {service_name}，因为它没有build字段")
+            # 显示存在的字段信息
+            if 'image' in service_config:
+                print(f"  image字段: {service_config['image']}")
+            if 'build' in service_config:
+                print(f"  build字段: {service_config['build']}")
     
     # 更新services
     data['services'] = filtered_services
@@ -84,6 +82,7 @@ def filter_services(compose_file):
         print(f"原始服务数: {original_count}")
         print(f"保留服务数: {filtered_count}")
         print(f"移除服务数: {original_count - filtered_count}")
+        print("注意：只保留需要构建的服务（包含build字段），移除了仅使用预构建镜像的服务（只有image字段）")
         return True
     except Exception as e:
         print(f"错误: 写入文件时发生错误: {e}")
