@@ -9,49 +9,58 @@ on:
       - 'main'
 
 jobs:
-
-  # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
-  build-photonix:
+  # 构建Decohererk/DecoTV项目（单个Dockerfile在根目录）
+  build-decotv:
     uses: ./.github/workflows/build.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     with:
-      source_repo: 'li88iioo/Photonix'
-      docker_image_name: 'photonix'
+      source_repo: 'Decohererk/DecoTV'
+      docker_image_name: 'decotv'
+  
+  # # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
+  # build-photonix:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'li88iioo/Photonix'
+  #     docker_image_name: 'photonix'
 
-  # 使用docker-compose构建BiliNote项目（推荐方式）
-  build-bili-note-with-compose:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      source_repo: 'JefferyHcool/BiliNote'
-      docker_image_name: 'bili-note'
-      use_compose_build: true
-      compose_file_path: 'docker-compose.yml'
-      additional_files_to_copy: '[{"source": ".env.example", "destination": ".env"}]'
+  # # 使用docker-compose构建BiliNote项目（推荐方式）
+  # build-bili-note-with-compose:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'JefferyHcool/BiliNote'
+  #     docker_image_name: 'bili-note'
+  #     use_compose_build: true
+  #     compose_file_path: 'docker-compose.yml'
+  #     additional_files_to_copy: '[{"source": ".env.example", "destination": ".env"}]'
     
-  # 构建Minerchu/dongguaTV项目（单个Dockerfile在根目录）
-  build-dongguaTV:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      source_repo: 'Minerchu/dongguaTV'
-      docker_image_name: 'donggua-tv'
+  # # 构建Minerchu/dongguaTV项目（单个Dockerfile在根目录）
+  # build-dongguaTV:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'Minerchu/dongguaTV'
+  #     docker_image_name: 'donggua-tv'
       
-  # 构建Minerchu/dongguaTV项目（单个Dockerfile在根目录）
-  build-ogame-vue-ts:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      source_repo: 'setube/ogame-vue-ts'
-      docker_image_name: 'ogame-vue-ts'
+  # # 构建Minerchu/dongguaTV项目（单个Dockerfile在根目录）
+  # build-ogame-vue-ts:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     source_repo: 'setube/ogame-vue-ts'
+  #     docker_image_name: 'ogame-vue-ts'
       
       
   # 清除旧的workflow运行记录
