@@ -18,6 +18,8 @@ jobs:
     with:
       source_repo: 'Decohererk/DecoTV'
       docker_image_name: 'decotv'
+      
+  # 构建Lakr233/AssppWeb项目（单个Dockerfile在根目录）  
   build-assppweb:
     uses: ./.github/workflows/build.yml
     secrets:
@@ -26,6 +28,18 @@ jobs:
     with:
       source_repo: 'Lakr233/AssppWeb'
       docker_image_name: 'assppweb'
+      
+  # 使用docker-compose构建BiliNote项目
+  build-mindustry-with-compose:
+    uses: ./.github/workflows/build.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    with:
+      source_repo: 'FormatToday/Mindustry-docker'
+      docker_image_name: 'mindustry'
+      use_compose_build: true
+      compose_file_path: 'docker-compose.yml'
   
   # # 构建li88iioo/Photonix项目（单个Dockerfile在根目录）
   # build-photonix:
