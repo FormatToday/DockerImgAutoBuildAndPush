@@ -1,0 +1,10 @@
+[
+  {
+    "source_img": "ghcr.io/metacubex/metacubexd-server:latest",
+    "hub_name": "metacubexd-server"
+  },
+  {
+    "source_img": "ghcr.io/freeok/sonovel:latest",
+    "hub_name": "sonovel"
+  }
+]
