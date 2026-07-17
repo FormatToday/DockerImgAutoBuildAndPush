@@ -17,6 +17,7 @@ DockerImgAutoBuildAndPush 是一个自动化构建和推送 Docker 镜像的 Git
 - 支持单个和多个 Dockerfile 的构建
 - 可重用的工作流设计
 - 支持不同项目结构的灵活配置
+- **第三方镜像批量迁移**：通过配置文件批量将 GHCR/Quay 等 registry 的镜像迁移到 Docker Hub
 
 ## 使用方法
 
@@ -83,3 +84,42 @@ jobs:
       dockerfile_path: 'path/to/Dockerfile'
       context_path: 'path/to/context'
 ```
+
+## 镜像迁移流程
+
+用于将第三方 registry（如 GHCR、Quay.io）的已有镜像批量迁移到 Docker Hub，无需源码构建。
+
+### 工作原理
+
+1. **`migrate-list.json`**：迁移清单，定义所有需要迁移的源镜像与目标镜像名
+2. **`dockerfiles/migrate-template.Dockerfile`**：模板 Dockerfile，通过 `ARG SRC_IMG` 动态接收源镜像地址，以 `FROM ${SRC_IMG}` 的方式直接重新打标签
+3. **`.github/workflows/migrate.yml`**：工作流读取 JSON 清单，通过 matrix 策略为每个镜像并行执行迁移任务
+
+### migrate-list.json 字段说明
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| `source_img` | 源镜像地址（不含 tag） | `ghcr.io/metacubex/metacubexd-server` |
+| `hub_name` | 推送到 Docker Hub 的仓库名 | `metacubexd-server` |
+| `tag` | 源镜像的 tag | `latest` |
+
+示例：
+
+```json
+[
+  {
+    "source_img": "ghcr.io/metacubex/metacubexd-server",
+    "hub_name": "metacubexd-server",
+    "tag": "latest"
+  }
+]
+```
+
+### 添加迁移镜像
+
+直接编辑 `migrate-list.json`，在数组中追加一条记录即可，无需修改工作流文件。
+
+### 触发方式
+
+- **手动触发**：GitHub Actions 页面选择「迁移第三方镜像到DockerHub」工作流 → Run workflow
+- **定时触发**：每天 UTC 5:00（北京时间 13:00）自动执行一次

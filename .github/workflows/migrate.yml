@@ -1,0 +1,37 @@
+name: 迁移第三方镜像到DockerHub
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * *'  # 每天 UTC 5:00 自动执行
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: 检出当前仓库
+        uses: actions/checkout@v4
+
+      - name: 从 migrate-list.json 生成构建矩阵
+        id: set-matrix
+        run: |
+          matrix=$(jq -c '{include: .}' migrate-list.json)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+  migrate-image:
+    needs: generate-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+      fail-fast: false
+    uses: ./.github/workflows/build.yml
+    with:
+      source_repo: ${{ github.repository }}
+      docker_image_name: ${{ matrix.hub_name }}
+      use_custom_dockerfile: true
+      custom_dockerfile_path: dockerfiles/migrate-template.Dockerfile
+      additional_files_to_copy: '[{"build_arg": "SRC_IMG=${{ matrix.source_img }}:${{ matrix.tag }}"}]'
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

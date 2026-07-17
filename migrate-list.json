@@ -1,10 +1,12 @@
 [
   {
-    "source_img": "ghcr.io/metacubex/metacubexd-server:latest",
-    "hub_name": "metacubexd-server"
+    "source_img": "ghcr.io/metacubex/metacubexd-server",
+    "hub_name": "metacubexd-server",
+    "tag":"latest"
   },
   {
-    "source_img": "ghcr.io/freeok/sonovel:latest",
-    "hub_name": "sonovel"
+    "source_img": "ghcr.io/freeok/sonovel",
+    "hub_name": "sonovel",
+    "tag":"latest"
   }
 ]
