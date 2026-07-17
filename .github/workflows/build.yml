@@ -125,6 +125,8 @@ jobs:
               if [ -n "$source_file" ] && [ -f "$source_file" ]; then
                 echo "复制文件：$source_file 到 $destination_file"
                 cp "$source_file" "$destination_file"
+              elif [ -z "$source_file" ]; then
+                echo "仅传递构建参数，无需复制文件"
               else
                 echo "源文件不存在或未指定：$source_file"
               fi
@@ -215,3 +217,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+              # 新增：解析additional_files_to_copy提取build参数
+          build-args: |
+            ${{ fromJson(inputs.additional_files_to_copy)[0].build_arg || '' }}
