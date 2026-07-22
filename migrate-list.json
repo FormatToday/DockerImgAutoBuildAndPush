@@ -8,5 +8,15 @@
     "source_img": "ghcr.io/freeok/sonovel",
     "hub_name": "sonovel",
     "tag":"latest"
+  },
+  {
+    "source_img": "ghcr.io/homarr-labs/homarr",
+    "hub_name": "homarr",
+    "tag":"latest"
+  },
+  {
+    "source_img": "lscr.io/linuxserver/transmission",
+    "hub_name": "transmission",
+    "tag":"latest"
   }
 ]
