@@ -1,9 +1,12 @@
 name: 迁移第三方镜像到DockerHub
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 5 * * *'  # 每天 UTC 5:00 自动执行
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
 
 jobs:
   generate-matrix:
