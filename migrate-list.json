@@ -18,5 +18,10 @@
     "source_img": "lscr.io/linuxserver/transmission",
     "hub_name": "transmission",
     "tag":"latest"
+  },
+  {
+    "source_img": "ghcr.io/home-assistant/home-assistant",
+    "hub_name": "home-assistant",
+    "tag":"stable"
   }
 ]
