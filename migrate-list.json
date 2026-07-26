@@ -23,5 +23,10 @@
     "source_img": "ghcr.io/home-assistant/home-assistant",
     "hub_name": "home-assistant",
     "tag":"stable"
+  },
+  {
+    "source_img": "ghcr.io/koodo-reader/koodo-reader",
+    "hub_name": "koodo-reader",
+    "tag":"master"
   }
 ]
