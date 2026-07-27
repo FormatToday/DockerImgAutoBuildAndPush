@@ -67,6 +67,7 @@ jobs:
         with:
           repository: ${{ inputs.source_repo }}
           path: target-repo
+          submodules: true
 
       - name: 复制自定义Dockerfile到目标仓库
         if: ${{ inputs.use_custom_dockerfile }}
