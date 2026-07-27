@@ -1,6 +1,7 @@
 # DockerImgAutoBuildAndPush
 
 [![构建状态](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/main.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/main.yml)
+[![构建状态](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/migrate.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/migrate.yml)
 
 ## 简介
 
