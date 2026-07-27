@@ -28,5 +28,15 @@
     "source_img": "ghcr.io/koodo-reader/koodo-reader",
     "hub_name": "koodo-reader",
     "tag":"master"
+  },
+  {
+    "source_img": "docker.gitea.com/gitea",
+    "hub_name": "gitea-rootless",
+    "tag":"latest-rootless"
+  },
+  {
+    "source_img": "docker.gitea.com/gitea",
+    "hub_name": "gitea",
+    "tag":"latest"
   }
 ]
