@@ -43,5 +43,10 @@
     "source_img": "ghcr.io/ulsklyc/yuvomi",
     "hub_name": "yuvomi",
     "tag":"latest"
+  },
+  {
+    "source_img": "ghcr.io/cxfksword/douban-api-rs",
+    "hub_name": "douban-api-rs",
+    "tag":"latest"
   }
 ]
