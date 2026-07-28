@@ -38,5 +38,10 @@
     "source_img": "docker.gitea.com/gitea",
     "hub_name": "gitea",
     "tag":"latest"
+  },
+  {
+    "source_img": "ghcr.io/ulsklyc/yuvomi",
+    "hub_name": "yuvomi",
+    "tag":"latest"
   }
 ]
