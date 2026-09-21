@@ -48,5 +48,10 @@
     "source_img": "ghcr.io/cxfksword/douban-api-rs",
     "hub_name": "douban-api-rs",
     "tag":"latest"
+  },
+  {
+    "source_img": "cnb.cool/hectorqin/reader",
+    "hub_name": "reader",
+    "tag":"latest"
   }
 ]
