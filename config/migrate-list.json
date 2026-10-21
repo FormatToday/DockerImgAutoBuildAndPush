@@ -1,6 +1,6 @@
 [
   {
-    "source_img": "cnb.cool/hectorqin/reader",
+    "source_img": "docker.cnb.cool/hectorqin/reader",
     "hub_name": "reader",
     "tag": "main"
   }
