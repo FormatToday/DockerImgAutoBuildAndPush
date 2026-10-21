@@ -46,10 +46,9 @@ jobs:
           fi
           value=$(jq -c '
             map({
-              source_img:  .source_img,
-              hub_name:    .hub_name,
-              tag:         .tag,
-              target_tags: (.target_tags // [.tag])
+              source_img: .source_img,
+              hub_name:   .hub_name,
+              tag:        .tag
             }) | {include: .}
           ' config/migrate-list.json)
           echo "value=$value" >> "$GITHUB_OUTPUT"
@@ -100,7 +99,6 @@ jobs:
           HUB_REPO: ${{ env.HUB_OWNER }}/${{ steps.repo.outputs.image }}
           GHCR_REPO: ghcr.io/${{ env.GHCR_OWNER }}/${{ steps.repo.outputs.image }}
           GHCR_PAGE: https://github.com/${{ github.repository }}/pkgs/container/${{ steps.repo.outputs.image }}
-          TARGET_TAGS: ${{ join(matrix.target_tags, ' ') }}
         run: |
           set -euo pipefail
           authfile="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
@@ -109,14 +107,8 @@ jobs:
             exit 1
           fi
 
-          tags=()
-          for tag in $TARGET_TAGS; do
-            tags+=("$tag")
-          done
-          if [ ${#tags[@]} -eq 0 ]; then
-            echo "错误: 目标标签为空" >&2
-            exit 1
-          fi
+          # 与构建保持一致：固定推送 latest 与当天日期（UTC）两个标签
+          tags=("latest" "$(date -u +%Y.%m.%d)")
 
           # --all 不可省略：skopeo 默认只复制当前系统架构，
           # 加 --all 才会把多架构索引及其全部子镜像一起复制
@@ -179,7 +171,7 @@ jobs:
             echo "| 源镜像 | \`$SRC_IMG\` |"
             echo "| Docker Hub | \`$HUB_REPO\` |"
             echo "| GHCR | \`$GHCR_REPO\` |"
-            echo "| 目标标签 | \`${tags[*]}\` |"
+            echo "| 产出标签 | \`${tags[*]}\` |"
             echo "| 复制方式 | \`skopeo copy --all\`（保留全部架构） |"
             echo ""
             echo "### 各标签直达链接"

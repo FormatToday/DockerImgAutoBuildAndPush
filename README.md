@@ -140,23 +140,34 @@ Actions 页面选择「定时任务」→ Run workflow。
 | `source_img` | 是 | — | 源镜像地址，**不含 tag** |
 | `hub_name` | 是 | — | 镜像名（不含用户名），Docker Hub 与 GHCR 共用 |
 | `tag` | 是 | — | 源镜像的 tag |
-| `target_tags` | 否 | `[tag]` | 目标标签数组，可一次推多个 |
 
 ```json
 [
   {
-    "source_img": "cnb.cool/hectorqin/reader",
+    "source_img": "docker.cnb.cool/hectorqin/reader",
     "hub_name": "reader",
-    "tag": "latest"
+    "tag": "main"
   },
   {
     "source_img": "ghcr.io/metacubex/metacubexd",
     "hub_name": "metacubexd",
-    "tag": "latest",
-    "target_tags": ["latest", "2026.10.21"]
+    "tag": "latest"
   }
 ]
 ```
+
+### 产出标签
+
+与构建完全一致：每次迁移固定推送 `latest` 与当天日期（如 `2026.10.21`），同一批标签**同时打到两个仓库**：
+
+```
+formattoday/<镜像名>:latest
+formattoday/<镜像名>:2026.10.21
+ghcr.io/formattoday/<镜像名>:latest
+ghcr.io/formattoday/<镜像名>:2026.10.21
+```
+
+源镜像的 tag 只用于**定位源**（`source_img:tag`），不会带到目标仓库。同一天重复迁移会覆盖当天标签。
 
 ### 新增迁移镜像
 
