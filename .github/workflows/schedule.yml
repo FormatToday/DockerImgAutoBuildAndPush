@@ -1,6 +1,7 @@
 name: 定时任务
 
-# 从 config/build-list.json 读取待构建项目，逐个项目并行调用 build.yml
+# 定时入口：按 config/build-list.json 并行构建镜像，按 config/migrate-list.json 并行迁移镜像。
+# 两条流水线互不依赖，串在同一个定时任务里，避免同一天分两次触发。
 on:
   schedule:
     - cron: "0 4 * * *" # 每天 UTC 04:00（北京时间 12:00）
@@ -12,6 +13,7 @@ on:
       - "config/build-list.json"
       - ".github/workflows/schedule.yml"
       - ".github/workflows/build.yml"
+      - ".github/workflows/migrate.yml"
 
 permissions:
   contents: read
@@ -63,6 +65,14 @@ jobs:
       context_path: ${{ matrix.context_path }}
       platforms: ${{ matrix.platforms }}
       additional_tags: ${{ matrix.additional_tags }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # 与构建并行执行，不阻塞构建结果
+  migrate:
+    name: 迁移镜像
+    uses: ./.github/workflows/migrate.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -47,6 +47,13 @@ permissions:
   contents: read
   packages: write
 
+# Docker Hub 用户名与 GitHub 命名空间不同名时，改这里的 hub_owner 即可。
+# 注意：不要写成 ${{ secrets.DOCKERHUB_USERNAME }}，secret 的取值在日志和运行摘要中
+# 会被 GitHub 打码成 ***，导致摘要里的镜像地址不可读。
+env:
+  HUB_OWNER: formattoday
+  GHCR_OWNER: formattoday
+
 jobs:
   build:
     name: ${{ inputs.docker_image_name }}
@@ -62,17 +69,15 @@ jobs:
           submodules: recursive
 
       # GHCR 要求仓库路径全小写，Docker Hub 同样不接受大写
-      - name: 解析镜像仓库
+      - name: 解析镜像名
         id: repo
         run: |
           set -euo pipefail
-          owner=$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           image=$(printf '%s' "${{ inputs.docker_image_name }}" | tr '[:upper:]' '[:lower:]')
-          if [ -z "$owner" ] || [ -z "$image" ]; then
-            echo "错误: 镜像仓库名解析为空" >&2
+          if [ -z "$image" ]; then
+            echo "错误: 镜像名为空" >&2
             exit 1
           fi
-          echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "image=$image" >> "$GITHUB_OUTPUT"
 
       - name: 设置 QEMU
@@ -100,8 +105,8 @@ jobs:
         uses: docker/metadata-action@master
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo.outputs.image }}
-            ghcr.io/${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.image }}
+            ${{ env.HUB_OWNER }}/${{ steps.repo.outputs.image }}
+            ghcr.io/${{ env.GHCR_OWNER }}/${{ steps.repo.outputs.image }}
           tags: |
             type=raw,value=latest
             type=raw,value={{date 'YYYY.MM.DD'}}
@@ -109,6 +114,9 @@ jobs:
 
       - name: 构建并推送
         uses: docker/build-push-action@master
+        env:
+          # 该 action 默认会自己写一份英文 Job Summary，关闭后只保留下面的中文摘要
+          DOCKER_BUILD_SUMMARY: "false"
         with:
           context: ./src/${{ inputs.context_path }}
           file: ./src/${{ inputs.dockerfile_path }}
@@ -121,26 +129,69 @@ jobs:
 
       - name: 输出运行摘要
         env:
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_NAME: ${{ steps.repo.outputs.image }}
-          HUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo.outputs.image }}
-          GHCR_REPO: ghcr.io/${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.image }}
+          HUB_REPO: ${{ env.HUB_OWNER }}/${{ steps.repo.outputs.image }}
+          GHCR_REPO: ghcr.io/${{ env.GHCR_OWNER }}/${{ steps.repo.outputs.image }}
           GHCR_PAGE: https://github.com/${{ github.repository }}/pkgs/container/${{ steps.repo.outputs.image }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PLATFORMS: ${{ inputs.platforms }}
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           set -euo pipefail
+
+          # metadata-action 输出的标签形如 owner/镜像:标签、ghcr.io/owner/镜像:标签，
+          # 两个仓库的标签完全相同，取非 ghcr.io 的那一半去重即可
+          tag_list=$(printf '%s\n' "$IMAGE_TAGS" | grep -v '^ghcr\.io/' | sed 's/.*://' | awk 'NF && !seen[$0]++')
+          if [ -z "$tag_list" ]; then
+            echo "错误: 没有解析到任何标签" >&2
+            exit 1
+          fi
+
+          # GHCR 的包页面只有形如 .../pkgs/container/镜像/版本ID?tag=标签 才能定位到具体标签，
+          # 只加 ?tag= 会停在默认标签上。版本 ID 需要查 API，查不到就退回包页面本身。
+          ghcr_link() {
+            local tag="$1" api id
+            for api in "orgs/${GHCR_OWNER}" "users/${GHCR_OWNER}"; do
+              id=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+                      -H "Authorization: Bearer ${GH_API_TOKEN}" \
+                      "https://api.github.com/${api}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null \
+                    | jq -r --arg t "$tag" '[.[]? | select(.metadata.container.tags // [] | index($t))][0].id // empty' 2>/dev/null) || true
+              if [ -n "${id:-}" ]; then
+                printf '%s/%s?tag=%s' "$GHCR_PAGE" "$id" "$tag"
+                return 0
+              fi
+            done
+            printf '%s' "$GHCR_PAGE"
+          }
+
           {
             echo "## 构建完成"
             echo ""
             echo "镜像 \`$IMAGE_NAME\` 已同时推送到 Docker Hub 与 GHCR。"
             echo ""
-            echo "| 仓库 | 镜像地址 | 页面链接 |"
+            echo "| 项目 | 值 |"
+            echo "| --- | --- |"
+            echo "| 源码仓库 | \`$SOURCE_REPO\` |"
+            echo "| 源码版本 | \`${SOURCE_REF:-默认分支}\` |"
+            echo "| 目标平台 | \`$PLATFORMS\` |"
+            echo "| Docker Hub | \`$HUB_REPO\` |"
+            echo "| GHCR | \`$GHCR_REPO\` |"
+            echo ""
+            echo "### 本次推送的标签"
+            echo ""
+            echo "| 标签 | Docker Hub | GHCR |"
             echo "| --- | --- | --- |"
-            echo "| Docker Hub | \`$HUB_REPO\` | https://hub.docker.com/r/$HUB_REPO |"
-            echo "| GHCR | \`$GHCR_REPO\` | $GHCR_PAGE |"
+            while IFS= read -r tag; do
+              [ -n "$tag" ] || continue
+              echo "| \`$tag\` | [Docker Hub](https://hub.docker.com/r/$HUB_REPO/tags?name=$tag) | [GHCR]($(ghcr_link "$tag")) |"
+            done <<< "$tag_list"
             echo ""
-            echo "本次推送的标签："
+            echo "拉取命令："
             echo ""
-            echo '```'
-            echo "$IMAGE_TAGS"
+            echo '```bash'
+            echo "docker pull $HUB_REPO:$(printf '%s\n' "$tag_list" | awk 'NR==1')"
+            echo "docker pull $GHCR_REPO:$(printf '%s\n' "$tag_list" | awk 'NR==1')"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

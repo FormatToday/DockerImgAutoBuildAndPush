@@ -11,8 +11,8 @@
 .
 ├── .github/workflows/
 │   ├── build.yml            # 可复用工作流：检出仓库 → 构建 → 推送 Docker Hub + GHCR
-│   ├── schedule.yml         # 入口：读 build-list.json，按矩阵调 build.yml，并清理旧运行记录
-│   └── migrate.yml          # 入口：读 migrate-list.json，按矩阵复制镜像
+│   ├── schedule.yml         # 定时入口：按两份清单并行调 build.yml 与 migrate.yml，并清理旧运行记录
+│   └── migrate.yml          # 可复用工作流 / 手动入口：读 migrate-list.json，按矩阵复制镜像
 ├── config/
 │   ├── build-list.json      # 需要构建的项目清单
 │   └── migrate-list.json    # 需要迁移的镜像清单
@@ -21,8 +21,8 @@
 
 | 文件 | 类型 | 触发方式 |
 |------|------|----------|
-| `schedule.yml` | 入口工作流 | 每天 12:00（北京时间）、手动、清单变更时 |
-| `migrate.yml` | 入口工作流 | 每天 11:00（北京时间）、手动、清单变更时 |
+| `schedule.yml` | 定时入口 | 每天 12:00（北京时间）、手动、清单/工作流变更时；**同时驱动构建与迁移** |
+| `migrate.yml` | 可复用 + 手动入口 | 由 `schedule.yml` 调用；也可手动运行，或 `migrate-list.json` 变更时单独触发 |
 | `build.yml` | 可复用工作流 | 仅由 `schedule.yml` 调用，不单独触发 |
 
 ## 前置准备
@@ -40,7 +40,17 @@ GHCR 使用 GitHub 内置的 `GITHUB_TOKEN`，无需额外 secret，但需要满
 1. 工作流已声明 `packages: write` 权限（本仓库已内置）；
 2. 仓库 `Settings → Actions → General → Workflow permissions` 允许读写，组织若禁用了包写入，需要改用具备 `write:packages` 的 PAT。
 
-两个 registry 的目标仓库不存在时都会被自动创建，无需提前建库。GHCR 首次推送后包默认为 **私有**，如需公开在包包页面的 Danger Zone 里改。镜像路径中的用户名会统一转小写（GHCR 强制要求）。
+两个 registry 的目标仓库不存在时都会被自动创建，无需提前建库。GHCR 首次推送后包默认为 **私有**，如需公开在包包页面的 Danger Zone 里改。
+
+镜像命名空间在两个工作流顶部固定写死为 `formattoday`（`env: HUB_OWNER` / `env: GHCR_OWNER`）：
+
+```yaml
+env:
+  HUB_OWNER: formattoday
+  GHCR_OWNER: formattoday
+```
+
+**不要改成 `${{ secrets.DOCKERHUB_USERNAME }}`**：secret 的取值在运行日志和 Job Summary 中会被 GitHub 自动打码成 `***`，摘要里的镜像地址和链接就会变成一堆星号。换命名空间时改这两行即可，需与 `DOCKERHUB_USERNAME` 保持一致。
 
 ---
 
@@ -84,8 +94,10 @@ GHCR 使用 GitHub 内置的 `GITHUB_TOKEN`，无需额外 secret，但需要满
 每次构建固定推送两个标签：`latest` 与当天日期（如 `2026.10.21`），同一批标签会**同时打到两个仓库**：
 
 ```
-<DOCKERHUB_USERNAME>/<镜像名>:latest        → https://hub.docker.com/r/<DOCKERHUB_USERNAME>/<镜像名>
-ghcr.io/<仓库 owner 小写>/<镜像名>:latest     → https://github.com/<owner>/<repo>/pkgs/container/<镜像名>
+formattoday/<镜像名>:latest
+formattoday/<镜像名>:2026.10.21
+ghcr.io/formattoday/<镜像名>:latest
+ghcr.io/formattoday/<镜像名>:2026.10.21
 ```
 
 同一天重复构建会覆盖当天标签。
@@ -158,4 +170,4 @@ Actions 页面选择「迁移镜像」→ Run workflow。
 - **权限最小化**：工作流只申请 `contents: read` 与 `packages: write`（推送 GHCR 所需），不涉及任何写仓库内容的权限。
 - **并发安全**：矩阵内各任务互不影响；同一工作流重复触发时，两个 registry 都以最后一次推送为准。
 - **构建缓存**：构建走 GitHub Actions 缓存（`type=gha`），同镜像的重复构建会复用层缓存。
-- **运行摘要**：构建与迁移都会在 Actions 运行摘要里用中文列出结果，并给出当前镜像在 Docker Hub 与 GHCR 的地址和页面链接，便于回查。
+- **运行摘要**：构建与迁移都会用中文写 Actions 运行摘要，逐个标签给出 Docker Hub 与 GHCR 的直达链接（日期标签可直接跳转，不会停在 `latest`），并附拉取命令。`docker/build-push-action` 自带的英文摘要已用 `DOCKER_BUILD_SUMMARY: false` 关闭，摘要里只会有一份中文内容。

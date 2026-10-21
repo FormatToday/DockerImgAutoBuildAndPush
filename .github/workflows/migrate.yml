@@ -2,20 +2,30 @@ name: 迁移镜像
 
 # 从 config/migrate-list.json 读取镜像清单，用 skopeo 在 registry 之间直连复制：
 # 不落本地磁盘、不重建、保留全部架构与原始 digest，同时落地 Docker Hub 与 GHCR。
+# 定时执行由 schedule.yml 统一调度，这里不再单独配 cron，避免同一天跑两遍。
 on:
-  schedule:
-    - cron: "0 3 * * *" # 每天 UTC 03:00（北京时间 11:00）
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
   workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - "config/migrate-list.json"
-      - ".github/workflows/migrate.yml"
 
 permissions:
   contents: read
   packages: write
+
+# 注意：不要写成 ${{ secrets.DOCKERHUB_USERNAME }}，secret 的取值在日志和运行摘要中
+# 会被 GitHub 打码成 ***，导致摘要里的镜像地址不可读。
+env:
+  HUB_OWNER: formattoday
+  GHCR_OWNER: formattoday
 
 jobs:
   plan:
@@ -59,18 +69,15 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq skopeo
 
-      # GHCR 要求仓库路径全小写，Docker Hub 同样不接受大写
-      - name: 解析镜像仓库
+      - name: 解析镜像名
         id: repo
         run: |
           set -euo pipefail
-          owner=$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           image=$(printf '%s' "${{ matrix.hub_name }}" | tr '[:upper:]' '[:lower:]')
-          if [ -z "$owner" ] || [ -z "$image" ]; then
-            echo "错误: 镜像仓库名解析为空" >&2
+          if [ -z "$image" ]; then
+            echo "错误: 镜像名为空" >&2
             exit 1
           fi
-          echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "image=$image" >> "$GITHUB_OUTPUT"
 
       - name: 登录 Docker Hub
@@ -88,9 +95,11 @@ jobs:
 
       - name: 复制镜像
         env:
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_NAME: ${{ steps.repo.outputs.image }}
           SRC_IMG: ${{ matrix.source_img }}:${{ matrix.tag }}
-          HUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo.outputs.image }}
-          GHCR_REPO: ghcr.io/${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.image }}
+          HUB_REPO: ${{ env.HUB_OWNER }}/${{ steps.repo.outputs.image }}
+          GHCR_REPO: ghcr.io/${{ env.GHCR_OWNER }}/${{ steps.repo.outputs.image }}
           GHCR_PAGE: https://github.com/${{ github.repository }}/pkgs/container/${{ steps.repo.outputs.image }}
           TARGET_TAGS: ${{ join(matrix.target_tags, ' ') }}
         run: |
@@ -146,11 +155,22 @@ jobs:
           echo "Docker Hub digest: $hub_digest"
           echo "GHCR digest: $ghcr_digest"
 
-          mismatch=0
-          if [ "$src_digest" != "$hub_digest" ] || [ "$src_digest" != "$ghcr_digest" ]; then
-            mismatch=1
-            echo "警告: digest 与源镜像不一致，源镜像可能被 registry 重新序列化，请人工确认"
-          fi
+          # GHCR 的包页面只有形如 .../pkgs/container/镜像/版本ID?tag=标签 才能定位到具体标签，
+          # 只加 ?tag= 会停在默认标签上。版本 ID 需要查 API，查不到就退回包页面本身。
+          ghcr_link() {
+            local tag="$1" api id
+            for api in "orgs/${GHCR_OWNER}" "users/${GHCR_OWNER}"; do
+              id=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+                      -H "Authorization: Bearer ${GH_API_TOKEN}" \
+                      "https://api.github.com/${api}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null \
+                    | jq -r --arg t "$tag" '[.[]? | select(.metadata.container.tags // [] | index($t))][0].id // empty' 2>/dev/null) || true
+              if [ -n "${id:-}" ]; then
+                printf '%s/%s?tag=%s' "$GHCR_PAGE" "$id" "$tag"
+                return 0
+              fi
+            done
+            printf '%s' "$GHCR_PAGE"
+          }
 
           {
             echo "## 迁移完成"
@@ -158,15 +178,35 @@ jobs:
             echo "| 项目 | 值 |"
             echo "| --- | --- |"
             echo "| 源镜像 | \`$SRC_IMG\` |"
-            echo "| 源 digest | \`$src_digest\` |"
-            echo "| Docker Hub 镜像 | [\`$HUB_REPO\`](https://hub.docker.com/r/$HUB_REPO) |"
-            echo "| Docker Hub digest | \`$hub_digest\` |"
-            echo "| GHCR 镜像 | [\`$GHCR_REPO\`]($GHCR_PAGE) |"
-            echo "| GHCR digest | \`$ghcr_digest\` |"
+            echo "| Docker Hub | \`$HUB_REPO\` |"
+            echo "| GHCR | \`$GHCR_REPO\` |"
             echo "| 目标标签 | \`${tags[*]}\` |"
+            echo "| 复制方式 | \`skopeo copy --all\`（保留全部架构） |"
             echo ""
-            if [ "$mismatch" -eq 1 ]; then
-              echo "> 注意：目标 digest 与源镜像不一致，请人工确认镜像是否被重新序列化。"
+            echo "### 各标签直达链接"
+            echo ""
+            echo "| 标签 | Docker Hub | GHCR |"
+            echo "| --- | --- | --- |"
+            for tag in "${tags[@]}"; do
+              echo "| \`$tag\` | [Docker Hub](https://hub.docker.com/r/$HUB_REPO/tags?name=$tag) | [GHCR]($(ghcr_link "$tag")) |"
+            done
+            echo ""
+            echo "### digest 校验"
+            echo ""
+            echo "| 位置 | digest |"
+            echo "| --- | --- |"
+            echo "| 源镜像 | \`$src_digest\` |"
+            echo "| Docker Hub | \`$hub_digest\` |"
+            echo "| GHCR | \`$ghcr_digest\` |"
+            echo ""
+            if [ "$src_digest" != "$hub_digest" ] || [ "$src_digest" != "$ghcr_digest" ]; then
+              echo "> 注意：目标 digest 与源镜像不一致，源镜像可能被 registry 重新序列化，请人工确认。"
               echo ""
             fi
+            echo "拉取命令："
+            echo ""
+            echo '```bash'
+            echo "docker pull $HUB_REPO:${tags[0]}"
+            echo "docker pull $GHCR_REPO:${tags[0]}"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
