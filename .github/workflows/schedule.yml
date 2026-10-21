@@ -1,7 +1,7 @@
 name: 定时任务
 
-# 定时入口：按 config/build-list.json 并行构建镜像，按 config/migrate-list.json 并行迁移镜像。
-# 两条流水线互不依赖，串在同一个定时任务里，避免同一天分两次触发。
+# 定时入口，只有三步：构建 → 迁移 → 清理。
+# 两份清单的解析与矩阵展开都在各自的流水线内部完成，这里只负责触发与串联。
 on:
   schedule:
     - cron: "0 4 * * *" # 每天 UTC 04:00（北京时间 12:00）
@@ -20,55 +20,14 @@ permissions:
   packages: write # 推送到 GHCR 需要
 
 jobs:
-  plan:
-    name: 生成构建矩阵
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.matrix.outputs.value }}
-    steps:
-      - name: 检出当前仓库
-        uses: actions/checkout@main
-
-      - name: 解析构建清单
-        id: matrix
-        run: |
-          set -euo pipefail
-          if [ "$(jq 'length' config/build-list.json)" -eq 0 ]; then
-            echo "错误: config/build-list.json 为空，没有可构建的项目" >&2
-            exit 1
-          fi
-          value=$(jq -c '
-            map({
-              source_repo,
-              docker_image_name,
-              source_ref:       (.source_ref       // ""),
-              dockerfile_path:  (.dockerfile_path  // "Dockerfile"),
-              context_path:     (.context_path     // "."),
-              platforms:        (.platforms        // "linux/amd64"),
-              additional_tags:  (.additional_tags  // "")
-            }) | {include: .}
-          ' config/build-list.json)
-          echo "value=$value" >> "$GITHUB_OUTPUT"
-
+  # 与迁移并行，读 config/build-list.json
   build:
-    name: 构建 ${{ matrix.docker_image_name }}
-    needs: plan
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    name: 构建镜像
     uses: ./.github/workflows/build.yml
-    with:
-      source_repo: ${{ matrix.source_repo }}
-      docker_image_name: ${{ matrix.docker_image_name }}
-      source_ref: ${{ matrix.source_ref }}
-      dockerfile_path: ${{ matrix.dockerfile_path }}
-      context_path: ${{ matrix.context_path }}
-      platforms: ${{ matrix.platforms }}
-      additional_tags: ${{ matrix.additional_tags }}
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # 与构建并行执行，不阻塞构建结果
+  # 与构建并行，读 config/migrate-list.json
   migrate:
     name: 迁移镜像
     uses: ./.github/workflows/migrate.yml

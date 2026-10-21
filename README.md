@@ -10,20 +10,27 @@
 ```
 .
 ├── .github/workflows/
-│   ├── build.yml            # 可复用工作流：检出仓库 → 构建 → 推送 Docker Hub + GHCR
-│   ├── schedule.yml         # 定时入口：并行调 build.yml 与 migrate.yml，全部结束后清理旧运行记录
-│   └── migrate.yml          # 可复用工作流 / 手动入口：读 migrate-list.json，按矩阵复制镜像
+│   ├── schedule.yml         # 定时入口，只有三步：构建 → 迁移 → 清理
+│   ├── build.yml            # 读 build-list.json 展开矩阵 → 检出源码 → 构建 → 推 DH + GHCR
+│   └── migrate.yml          # 读 migrate-list.json 展开矩阵 → skopeo 复制到 DH + GHCR
 ├── config/
 │   ├── build-list.json      # 需要构建的项目清单
 │   └── migrate-list.json    # 需要迁移的镜像清单
 └── README.md
 ```
 
+`schedule.yml` 只负责触发与串联，清单解析和矩阵展开都在各自的流水线内部完成，所以 Actions 里每次运行只呈现三个步骤：
+
+```
+构建镜像 ──┐
+迁移镜像 ──┴─→ 清理历史运行记录
+```
+
 | 文件 | 类型 | 触发方式 |
 |------|------|----------|
 | `schedule.yml` | 定时入口 | 每天 12:00（北京时间）、手动、清单/工作流变更时；**同时驱动构建与迁移** |
-| `migrate.yml` | 可复用 + 手动入口 | 由 `schedule.yml` 调用；也可手动运行，或 `migrate-list.json` 变更时单独触发 |
-| `build.yml` | 可复用工作流 | 仅由 `schedule.yml` 调用，不单独触发 |
+| `build.yml` | 流水线 | 由 `schedule.yml` 调用；也可手动运行 |
+| `migrate.yml` | 流水线 | 由 `schedule.yml` 调用；也可手动运行，或 `migrate-list.json` 变更时单独触发 |
 
 ## 前置准备
 
@@ -114,7 +121,7 @@ ghcr.io/formattoday/<镜像名>:2026.10.21
 
 ### 手动触发
 
-Actions 页面选择「定时任务」→ Run workflow。
+Actions 页面选择「构建镜像」只跑构建，选择「定时任务」则构建 + 迁移 + 清理一起跑。
 
 ---
 
@@ -183,7 +190,7 @@ Actions 页面选择「迁移镜像」→ Run workflow。
 
 ## 行为约定
 
-- **清单为空即失败**：两个入口都会在解析阶段校验数组长度，空清单会直接报错退出，避免“跑绿但什么都没做”。
+- **清单为空即失败**：两条流水线各自在解析阶段校验数组长度，空清单会直接报错退出，避免“跑绿但什么都没做”。
 - **权限最小化**：工作流只申请 `contents: read` 与 `packages: write`（推送 GHCR 所需），不涉及任何写仓库内容的权限。
 - **并发安全**：矩阵内各任务互不影响；同一工作流重复触发时，两个 registry 都以最后一次推送为准。
 - **构建缓存**：构建走 GitHub Actions 缓存（`type=gha`），同镜像的重复构建会复用层缓存。
