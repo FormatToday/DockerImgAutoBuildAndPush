@@ -1,9 +1,9 @@
-# DockerImgAutoBuildAndPush
+# docker-build-and-mirror
 
-[![定时任务](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/schedule.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/schedule.yml)  [![构建镜像](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/build.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/build.yml)  [![迁移镜像](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/migrate.yml/badge.svg)](https://github.com/FormatToday/DockerImgAutoBuildAndPush/actions/workflows/migrate.yml)
+[![定时任务](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/schedule.yml/badge.svg)](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/schedule.yml)  [![构建镜像](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/build.yml/badge.svg)](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/build.yml)  [![迁移镜像](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/migrate.yml/badge.svg)](https://github.com/FormatToday/docker-build-and-mirror/actions/workflows/migrate.yml)
 
 
-把「拉源码构建镜像并推送」和「搬运第三方 registry 的已有镜像」这两件事，各用一条独立流水线做好，产物同时落地 **Docker Hub 与 GHCR（ghcr.io）**，配置全部集中在 `config/` 下的两个 JSON 里。
+仓库名就是它的两件事：**build**（拉源码构建镜像）和 **mirror**（搬运第三方 registry 的已有镜像）。两者各用一条独立流水线，产物同时落地 **Docker Hub 与 GHCR（ghcr.io）**，配置全部集中在 `config/` 下的两个 JSON 里。
 
 ## 目录结构
 
