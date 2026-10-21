@@ -38,8 +38,8 @@ on:
         type: string
         default: ""
     secrets:
-      DOCKERHUB_USERNAME:
-        required: true
+      # 只接收 token。用户名不要再走 secret：GitHub 会对「当前 job 中用到的 secret 值」
+      # 在日志与运行摘要里做全文替换，用户名若以 secret 形式引入，摘要里的仓库地址会变成 ***
       DOCKERHUB_TOKEN:
         required: true
 
@@ -47,9 +47,9 @@ permissions:
   contents: read
   packages: write
 
-# Docker Hub 用户名与 GitHub 命名空间不同名时，改这里的 hub_owner 即可。
-# 注意：不要写成 ${{ secrets.DOCKERHUB_USERNAME }}，secret 的取值在日志和运行摘要中
-# 会被 GitHub 打码成 ***，导致摘要里的镜像地址不可读。
+# Docker Hub 用户名与 GitHub 命名空间不同名时，改这里的 HUB_OWNER 即可。
+# 注意：不要把它写成 ${{ secrets.DOCKERHUB_USERNAME }}。GitHub 会对当前 job 中用到的
+# secret 值在日志和运行摘要里做全文替换，写死的常量只要和 secret 值相同也会被替换成 ***。
 env:
   HUB_OWNER: formattoday
   GHCR_OWNER: formattoday
@@ -89,7 +89,7 @@ jobs:
       - name: 登录 Docker Hub
         uses: docker/login-action@master
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ env.HUB_OWNER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 登录 GHCR

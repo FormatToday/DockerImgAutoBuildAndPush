@@ -31,18 +31,17 @@
 
 | Secret | 说明 |
 |--------|------|
-| `DOCKERHUB_USERNAME` | Docker Hub 用户名，同时作为镜像命名空间 |
 | `DOCKERHUB_TOKEN` | Docker Hub Access Token（需 Read & Write 权限） |
 | `CLEANUP_TOKEN` | 个人访问令牌，仅用于清理旧运行记录（需 `workflow` 权限） |
 
-GHCR 使用 GitHub 内置的 `GITHUB_TOKEN`，无需额外 secret，但需要满足两个前提：
+Docker Hub **用户名不再作为 secret**（见下文命名空间说明），原来的 `DOCKERHUB_USERNAME` 可以删除。GHCR 使用 GitHub 内置的 `GITHUB_TOKEN`，也无需额外 secret，但需要满足两个前提：
 
 1. 工作流已声明 `packages: write` 权限（本仓库已内置）；
 2. 仓库 `Settings → Actions → General → Workflow permissions` 允许读写，组织若禁用了包写入，需要改用具备 `write:packages` 的 PAT。
 
 两个 registry 的目标仓库不存在时都会被自动创建，无需提前建库。GHCR 首次推送后包默认为 **私有**，如需公开在包包页面的 Danger Zone 里改。
 
-镜像命名空间在两个工作流顶部固定写死为 `formattoday`（`env: HUB_OWNER` / `env: GHCR_OWNER`）：
+镜像命名空间在两个工作流顶部固定写死为 `formattoday`（`env: HUB_OWNER` / `env: GHCR_OWNER`），登录 Docker Hub 也用它：
 
 ```yaml
 env:
@@ -50,7 +49,14 @@ env:
   GHCR_OWNER: formattoday
 ```
 
-**不要改成 `${{ secrets.DOCKERHUB_USERNAME }}`**：secret 的取值在运行日志和 Job Summary 中会被 GitHub 自动打码成 `***`，摘要里的镜像地址和链接就会变成一堆星号。换命名空间时改这两行即可，需与 `DOCKERHUB_USERNAME` 保持一致。
+### 为什么用户名不能放在 secret 里
+
+GitHub 的日志脱敏是**按值全文替换**的：它把「当前 job 里用到的 secret 值」当作待脱敏字符串，在日志和 Job Summary 里做全局替换。所以只要 job 里还引用了值等于 `formattoday` 的 secret，**任何位置**出现 `formattoday` 都会被换成 `***`——哪怕这个字符串是你写死的常量，甚至只是镜像名 `formattoday/reader` 里的一段。
+
+因此这里把用户名写成常量、只把 `DOCKERHUB_TOKEN` 作为 secret 传入。换命名空间时：
+
+1. 改这两行常量；
+2. 确保仓库里没有值相同的 secret（否则仍会被脱敏），最稳的做法是删掉 `DOCKERHUB_USERNAME`。
 
 ---
 

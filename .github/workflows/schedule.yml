@@ -66,7 +66,6 @@ jobs:
       platforms: ${{ matrix.platforms }}
       additional_tags: ${{ matrix.additional_tags }}
     secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   # 与构建并行执行，不阻塞构建结果
@@ -74,7 +73,6 @@ jobs:
     name: 迁移镜像
     uses: ./.github/workflows/migrate.yml
     secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   # 清理历史运行记录，避免 Actions 列表堆积（不影响构建结果）
