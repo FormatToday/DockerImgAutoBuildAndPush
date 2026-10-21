@@ -1,6 +1,6 @@
 name: 构建镜像
 
-# 可复用工作流：检出指定仓库 → 构建 Docker 镜像 → 推送到 Docker Hub
+# 可复用工作流：检出指定仓库 → 构建 Docker 镜像 → 同时推送到 Docker Hub 与 GHCR
 on:
   workflow_call:
     inputs:
@@ -9,7 +9,7 @@ on:
         required: true
         type: string
       docker_image_name:
-        description: Docker Hub 镜像名（不含用户名）
+        description: 镜像名（不含用户名），两个仓库共用
         required: true
         type: string
       source_ref:
@@ -45,6 +45,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   build:
@@ -60,6 +61,20 @@ jobs:
           path: src
           submodules: recursive
 
+      # GHCR 要求仓库路径全小写，Docker Hub 同样不接受大写
+      - name: 解析镜像仓库
+        id: repo
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          image=$(printf '%s' "${{ inputs.docker_image_name }}" | tr '[:upper:]' '[:lower:]')
+          if [ -z "$owner" ] || [ -z "$image" ]; then
+            echo "错误: 镜像仓库名解析为空" >&2
+            exit 1
+          fi
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
       - name: 设置 QEMU
         uses: docker/setup-qemu-action@master
 
@@ -72,12 +87,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 固定产出 latest 与当天日期两个标签
+      - name: 登录 GHCR
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 同一批标签会同时打到两个仓库
       - name: 生成镜像元数据
         id: meta
         uses: docker/metadata-action@master
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo.outputs.image }}
+            ghcr.io/${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.image }}
           tags: |
             type=raw,value=latest
             type=raw,value={{date 'YYYY.MM.DD'}}
@@ -95,11 +119,28 @@ jobs:
           cache-from: type=gha,scope=${{ inputs.docker_image_name }}
           cache-to: type=gha,mode=max,scope=${{ inputs.docker_image_name }}
 
-      - name: 输出镜像信息
+      - name: 输出运行摘要
+        env:
+          IMAGE_NAME: ${{ steps.repo.outputs.image }}
+          HUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo.outputs.image }}
+          GHCR_REPO: ghcr.io/${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.image }}
+          GHCR_PAGE: https://github.com/${{ github.repository }}/pkgs/container/${{ steps.repo.outputs.image }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
+          set -euo pipefail
           {
-            echo "### 已推送镜像"
+            echo "## 构建完成"
+            echo ""
+            echo "镜像 \`$IMAGE_NAME\` 已同时推送到 Docker Hub 与 GHCR。"
+            echo ""
+            echo "| 仓库 | 镜像地址 | 页面链接 |"
+            echo "| --- | --- | --- |"
+            echo "| Docker Hub | \`$HUB_REPO\` | https://hub.docker.com/r/$HUB_REPO |"
+            echo "| GHCR | \`$GHCR_REPO\` | $GHCR_PAGE |"
+            echo ""
+            echo "本次推送的标签："
+            echo ""
             echo '```'
-            echo "${{ steps.meta.outputs.tags }}"
+            echo "$IMAGE_TAGS"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

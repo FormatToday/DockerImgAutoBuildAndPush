@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  packages: write # 推送到 GHCR 需要
 
 jobs:
   plan:
