@@ -75,9 +75,12 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # 清理历史运行记录，避免 Actions 列表堆积（不影响构建结果）
+  # 等构建与迁移都结束后再清理，避免正在跑的任务被当成历史记录处理。
+  # always() 保证构建或迁移失败时依然会执行清理。
   cleanup-workflow-runs:
     name: 清理历史运行记录
+    needs: [build, migrate]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: 删除旧 Actions

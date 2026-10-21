@@ -11,7 +11,7 @@
 .
 ├── .github/workflows/
 │   ├── build.yml            # 可复用工作流：检出仓库 → 构建 → 推送 Docker Hub + GHCR
-│   ├── schedule.yml         # 定时入口：按两份清单并行调 build.yml 与 migrate.yml，并清理旧运行记录
+│   ├── schedule.yml         # 定时入口：并行调 build.yml 与 migrate.yml，全部结束后清理旧运行记录
 │   └── migrate.yml          # 可复用工作流 / 手动入口：读 migrate-list.json，按矩阵复制镜像
 ├── config/
 │   ├── build-list.json      # 需要构建的项目清单
