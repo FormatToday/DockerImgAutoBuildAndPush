@@ -1,0 +1,80 @@
+name: 定时任务
+
+# 从 config/build-list.json 读取待构建项目，逐个项目并行调用 build.yml
+on:
+  schedule:
+    - cron: "0 4 * * *" # 每天 UTC 04:00（北京时间 12:00）
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "config/build-list.json"
+      - ".github/workflows/schedule.yml"
+      - ".github/workflows/build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: 生成构建矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - name: 检出当前仓库
+        uses: actions/checkout@main
+
+      - name: 解析构建清单
+        id: matrix
+        run: |
+          set -euo pipefail
+          if [ "$(jq 'length' config/build-list.json)" -eq 0 ]; then
+            echo "错误: config/build-list.json 为空，没有可构建的项目" >&2
+            exit 1
+          fi
+          value=$(jq -c '
+            map({
+              source_repo,
+              docker_image_name,
+              source_ref:       (.source_ref       // ""),
+              dockerfile_path:  (.dockerfile_path  // "Dockerfile"),
+              context_path:     (.context_path     // "."),
+              platforms:        (.platforms        // "linux/amd64"),
+              additional_tags:  (.additional_tags  // "")
+            }) | {include: .}
+          ' config/build-list.json)
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: 构建 ${{ matrix.docker_image_name }}
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    uses: ./.github/workflows/build.yml
+    with:
+      source_repo: ${{ matrix.source_repo }}
+      docker_image_name: ${{ matrix.docker_image_name }}
+      source_ref: ${{ matrix.source_ref }}
+      dockerfile_path: ${{ matrix.dockerfile_path }}
+      context_path: ${{ matrix.context_path }}
+      platforms: ${{ matrix.platforms }}
+      additional_tags: ${{ matrix.additional_tags }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # 清理历史运行记录，避免 Actions 列表堆积（不影响构建结果）
+  cleanup-workflow-runs:
+    name: 清理历史运行记录
+    runs-on: ubuntu-latest
+    steps:
+      - name: 删除旧 Actions
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          token: ${{ secrets.CLEANUP_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 2

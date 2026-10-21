@@ -1,0 +1,121 @@
+name: 迁移镜像
+
+# 从 config/migrate-list.json 读取镜像清单，用 skopeo 在 registry 之间直连复制：
+# 不落本地磁盘、不重建、保留全部架构与原始 digest。
+on:
+  schedule:
+    - cron: "0 3 * * *" # 每天 UTC 03:00（北京时间 11:00）
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "config/migrate-list.json"
+      - ".github/workflows/migrate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: 生成迁移矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - name: 检出当前仓库
+        uses: actions/checkout@main
+
+      - name: 解析迁移清单
+        id: matrix
+        run: |
+          set -euo pipefail
+          if [ "$(jq 'length' config/migrate-list.json)" -eq 0 ]; then
+            echo "错误: config/migrate-list.json 为空，没有可迁移的镜像" >&2
+            exit 1
+          fi
+          value=$(jq -c '
+            map({
+              source_img:  .source_img,
+              hub_name:    .hub_name,
+              tag:         .tag,
+              target_tags: (.target_tags // [.tag])
+            }) | {include: .}
+          ' config/migrate-list.json)
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
+  migrate:
+    name: 迁移 ${{ matrix.hub_name }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - name: 安装 skopeo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq skopeo
+
+      - name: 登录 Docker Hub
+        uses: docker/login-action@master
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 复制镜像
+        env:
+          SRC_IMG: ${{ matrix.source_img }}:${{ matrix.tag }}
+          DST_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.hub_name }}
+          TARGET_TAGS: ${{ join(matrix.target_tags, ' ') }}
+        run: |
+          set -euo pipefail
+          authfile="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+          if [ ! -f "$authfile" ]; then
+            echo "错误: 未找到 Docker 凭据文件 $authfile" >&2
+            exit 1
+          fi
+
+          targets=()
+          for tag in $TARGET_TAGS; do
+            targets+=("$DST_REPO:$tag")
+          done
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "错误: 目标标签为空" >&2
+            exit 1
+          fi
+
+          echo "源镜像: $SRC_IMG"
+          echo "目标镜像: ${targets[*]}"
+
+          # 先完整复制到第一个标签。--all 不可省略：skopeo 默认只复制当前系统架构，
+          # 加 --all 才会把多架构索引及其全部子镜像一起复制
+          skopeo copy --all --retry-times 3 --authfile "$authfile" \
+            "docker://$SRC_IMG" "docker://${targets[0]}"
+
+          # 其余标签基于同一仓库复制，registry 侧直接复用已有 blob
+          for target in "${targets[@]:1}"; do
+            skopeo copy --all --retry-times 3 --authfile "$authfile" \
+              "docker://${targets[0]}" "docker://$target"
+          done
+
+          # 打印源与目标的 manifest digest，便于核对
+          src_digest=$(skopeo inspect --raw --authfile "$authfile" "docker://$SRC_IMG" | sha256sum | cut -d' ' -f1)
+          dst_digest=$(skopeo inspect --raw --authfile "$authfile" "docker://${targets[0]}" | sha256sum | cut -d' ' -f1)
+          echo "源 digest: $src_digest"
+          echo "目标 digest: $dst_digest"
+          if [ "$src_digest" != "$dst_digest" ]; then
+            echo "警告: digest 不一致，源镜像可能被 registry 重新序列化，请人工确认"
+          fi
+
+          {
+            echo "### 已迁移 \`$SRC_IMG\`"
+            echo ""
+            echo "| 项目 | 值 |"
+            echo "|------|-----|"
+            echo "| 源 digest | \`$src_digest\` |"
+            echo "| 目标 digest | \`$dst_digest\` |"
+            echo "| 目标标签 | \`${targets[*]}\` |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,6 @@
+[
+  {
+    "source_repo": "kurisu-agi/AssppWeb",
+    "docker_image_name": "assppweb"
+  }
+]

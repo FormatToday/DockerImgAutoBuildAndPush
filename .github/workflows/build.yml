@@ -1,0 +1,105 @@
+name: 构建镜像
+
+# 可复用工作流：检出指定仓库 → 构建 Docker 镜像 → 推送到 Docker Hub
+on:
+  workflow_call:
+    inputs:
+      source_repo:
+        description: 源码仓库，格式 owner/repo
+        required: true
+        type: string
+      docker_image_name:
+        description: Docker Hub 镜像名（不含用户名）
+        required: true
+        type: string
+      source_ref:
+        description: 分支 / tag / commit，留空使用仓库默认分支
+        required: false
+        type: string
+        default: ""
+      dockerfile_path:
+        description: Dockerfile 路径，相对仓库根目录
+        required: false
+        type: string
+        default: "Dockerfile"
+      context_path:
+        description: 构建上下文，相对仓库根目录
+        required: false
+        type: string
+        default: "."
+      platforms:
+        description: 目标平台，逗号分隔
+        required: false
+        type: string
+        default: "linux/amd64"
+      additional_tags:
+        description: 额外标签，使用 docker/metadata-action 的 tag 语法，每行一个
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.docker_image_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: 检出源码仓库
+        uses: actions/checkout@main
+        with:
+          repository: ${{ inputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          path: src
+          submodules: recursive
+
+      - name: 设置 QEMU
+        uses: docker/setup-qemu-action@master
+
+      - name: 设置 Buildx
+        uses: docker/setup-buildx-action@master
+
+      - name: 登录 Docker Hub
+        uses: docker/login-action@master
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 固定产出 latest 与当天日期两个标签
+      - name: 生成镜像元数据
+        id: meta
+        uses: docker/metadata-action@master
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image_name }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value={{date 'YYYY.MM.DD'}}
+            ${{ inputs.additional_tags }}
+
+      - name: 构建并推送
+        uses: docker/build-push-action@master
+        with:
+          context: ./src/${{ inputs.context_path }}
+          file: ./src/${{ inputs.dockerfile_path }}
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.docker_image_name }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.docker_image_name }}
+
+      - name: 输出镜像信息
+        run: |
+          {
+            echo "### 已推送镜像"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
