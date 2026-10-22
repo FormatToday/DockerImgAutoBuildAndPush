@@ -1,6 +1,7 @@
 [
   {
-    "source_repo": "kurisu-agi/AssppWeb",
+    "source_repo": "linusxiong/AssppWeb",
+    "branch": "feat/ent-download-kbsync",
     "docker_image_name": "assppweb"
   }
 ]
