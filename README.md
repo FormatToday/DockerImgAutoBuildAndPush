@@ -79,9 +79,9 @@ GitHub 的日志脱敏是**按值全文替换**的：它把「当前 job 里用�
 |------|------|--------|------|
 | `source_repo` | 是 | — | 源码仓库，`owner/repo` |
 | `docker_image_name` | 是 | — | 镜像名（不含用户名），Docker Hub 与 GHCR 共用 |
+| `branch` | 否 | 源码仓库默认分支 | 从哪个分支构建；也可填 tag 或 commit |
 | `dockerfile_path` | 否 | `Dockerfile` | Dockerfile 路径，相对仓库根目录 |
 | `context_path` | 否 | `.` | 构建上下文，相对仓库根目录 |
-| `source_ref` | 否 | 默认分支 | 分支 / tag / commit |
 | `platforms` | 否 | `linux/amd64` | 目标平台，逗号分隔 |
 | `additional_tags` | 否 | 空 | 额外标签，每行一个，遵循 metadata-action 语法 |
 
@@ -94,6 +94,7 @@ GitHub 的日志脱敏是**按值全文替换**的：它把「当前 job 里用�
   {
     "source_repo": "JefferyHcool/BiliNote",
     "docker_image_name": "bili-note",
+    "branch": "dev",
     "dockerfile_path": "backend/Dockerfile",
     "context_path": "backend",
     "platforms": "linux/amd64,linux/arm64",
@@ -101,6 +102,8 @@ GitHub 的日志脱敏是**按值全文替换**的：它把「当前 job 里用�
   }
 ]
 ```
+
+`branch` 省略时检出源码仓库的默认分支；填了分支就检出该分支的最新提交，填 tag / commit 则检出对应的固定版本。旧配置里的 `source_ref` 仍然可用，两者同时存在时以 `branch` 为准。
 
 ### 产出标签
 

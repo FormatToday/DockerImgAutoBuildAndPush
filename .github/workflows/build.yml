@@ -45,11 +45,12 @@ jobs:
             echo "错误: config/build-list.json 为空，没有可构建的项目" >&2
             exit 1
           fi
+          # branch 为空表示用源码仓库的默认分支；兼容旧字段 source_ref（两者同时存在时以 branch 为准）
           value=$(jq -c '
             map({
               source_repo,
               docker_image_name,
-              source_ref:       (.source_ref       // ""),
+              branch:           (.branch // .source_ref // ""),
               dockerfile_path:  (.dockerfile_path  // "Dockerfile"),
               context_path:     (.context_path     // "."),
               platforms:        (.platforms        // "linux/amd64"),
@@ -67,11 +68,12 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
+      # branch 除了分支名，也可以填 tag 或 commit，最终都交给 checkout 的 ref
       - name: 检出源码仓库
         uses: actions/checkout@main
         with:
           repository: ${{ matrix.source_repo }}
-          ref: ${{ matrix.source_ref }}
+          ref: ${{ matrix.branch }}
           path: src
           submodules: recursive
 
@@ -142,7 +144,7 @@ jobs:
           GHCR_REPO: ghcr.io/${{ env.GHCR_OWNER }}/${{ steps.repo.outputs.image }}
           GHCR_PAGE: https://github.com/${{ github.repository }}/pkgs/container/${{ steps.repo.outputs.image }}
           SOURCE_REPO: ${{ matrix.source_repo }}
-          SOURCE_REF: ${{ matrix.source_ref }}
+          SOURCE_BRANCH: ${{ matrix.branch }}
           PLATFORMS: ${{ matrix.platforms }}
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
@@ -181,7 +183,7 @@ jobs:
             echo "| 项目 | 值 |"
             echo "| --- | --- |"
             echo "| 源码仓库 | \`$SOURCE_REPO\` |"
-            echo "| 源码版本 | \`${SOURCE_REF:-默认分支}\` |"
+            echo "| 源码分支 | \`${SOURCE_BRANCH:-默认分支}\` |"
             echo "| 目标平台 | \`$PLATFORMS\` |"
             echo "| Docker Hub | \`$HUB_REPO\` |"
             echo "| GHCR | \`$GHCR_REPO\` |"
